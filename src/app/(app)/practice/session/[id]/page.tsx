@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Send, StopCircle } from "lucide-react";
+import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
+import { useSpeechSynthesis } from "@/lib/use-speech-synthesis";
 
 type Turn = {
   id: string;
@@ -22,6 +23,14 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   const [busy, setBusy] = useState(false);
   const [ending, setEnding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { speak, cancel, speaking, supported: voiceSupported } = useSpeechSynthesis();
+  const [voiceOn, setVoiceOn] = useState(true);
+  // Questions already read aloud, so re-fetching the transcript doesn't make
+  // the interviewer repeat itself.
+  const spokenRef = useRef<Set<string>>(new Set());
+  const wasListeningRef = useRef(false);
+  const primedRef = useRef(false);
 
   const { start, stop, listening, supported } = useSpeechRecognition((text, isFinal) => {
     if (isFinal) setAnswer((prev) => (prev ? prev + " " + text : text));
@@ -54,6 +63,74 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mockVoiceOn");
+      if (saved !== null) setVoiceOn(saved === "true");
+    } catch {
+      // Private mode / blocked storage - just keep the default.
+    }
+  }, []);
+
+  // Read each new interviewer question aloud.
+  //
+  // The microphone must be muted while this plays. Speakers feed straight back
+  // into the recognizer, and without this the interviewer's own question gets
+  // transcribed into the candidate's answer box.
+  useEffect(() => {
+    if (!voiceOn || !voiceSupported || turns.length === 0) return;
+
+    // On the first render of an existing transcript, mark what is already
+    // there as spoken. Re-opening a session should not blurt out a question
+    // the candidate has already heard and answered - and browsers can block
+    // audio that starts without a user interaction anyway. "Repeat Question"
+    // covers the case where they do want to hear it again.
+    if (!primedRef.current) {
+      primedRef.current = true;
+      const isFreshInterview =
+        turns.length === 1 && turns[0].speaker === "ai_interviewer";
+      if (!isFreshInterview) {
+        turns.forEach((t) => spokenRef.current.add(t.id));
+        return;
+      }
+    }
+
+    const latest = [...turns].reverse().find((t) => t.speaker === "ai_interviewer");
+    if (!latest || spokenRef.current.has(latest.id)) return;
+
+    // Mark before speaking so a re-render cannot double-trigger it.
+    spokenRef.current.add(latest.id);
+    const text = latest.cleanedTranscript || latest.rawTranscript || "";
+    if (!text.trim()) return;
+
+    wasListeningRef.current = listening;
+    if (listening) stop();
+    void speak(text).finally(() => {
+      if (wasListeningRef.current) start();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, voiceOn, voiceSupported]);
+
+  function toggleVoice() {
+    const next = !voiceOn;
+    setVoiceOn(next);
+    if (!next) cancel();
+    try {
+      localStorage.setItem("mockVoiceOn", String(next));
+    } catch {
+      // Preference just won't persist; not worth surfacing.
+    }
+  }
+
+  function replayQuestion() {
+    if (!lastQuestion.trim()) return;
+    wasListeningRef.current = listening;
+    if (listening) stop();
+    void speak(lastQuestion).finally(() => {
+      if (wasListeningRef.current) start();
+    });
+  }
+
   const lastQuestion = [...turns].reverse().find((t) => t.speaker === "ai_interviewer")?.cleanedTranscript || "";
 
   async function submitAnswer() {
@@ -72,6 +149,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
 
   async function endInterview() {
     setEnding(true);
+    cancel();
     if (listening) stop();
     await fetch(`/api/sessions/${id}/end`, { method: "POST" });
     router.push(`/history/${id}`);
@@ -84,9 +162,30 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
           <p className="text-xs font-semibold text-brand-blue uppercase tracking-wide">Mock Interview</p>
           <h1 className="text-lg font-semibold text-navy">Practice Session</h1>
         </div>
-        <Button variant="danger" onClick={endInterview} disabled={ending}>
-          <StopCircle size={15} /> {ending ? "Ending..." : "End Interview"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {voiceSupported && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={replayQuestion}
+                disabled={!lastQuestion || speaking}
+                title="Hear the question again"
+              >
+                Repeat Question
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={toggleVoice}
+                title={voiceOn ? "Mute the interviewer" : "Hear the interviewer"}
+              >
+                {voiceOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              </Button>
+            </>
+          )}
+          <Button variant="danger" onClick={endInterview} disabled={ending}>
+            <StopCircle size={15} /> {ending ? "Ending..." : "End Interview"}
+          </Button>
+        </div>
       </div>
 
       <Card className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -102,6 +201,12 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
           </div>
         ))}
         {busy && <p className="text-xs text-navy/40">The interviewer is thinking...</p>}
+        {speaking && (
+          <p className="flex items-center gap-1.5 text-xs text-brand-blue">
+            <Loader2 size={12} className="animate-spin" /> Interviewer is speaking - your mic is
+            muted until they finish.
+          </p>
+        )}
         <div ref={bottomRef} />
       </Card>
 
@@ -133,6 +238,11 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
       {!supported && (
         <p className="mt-2 text-xs text-navy/40">
           Voice input needs Chrome or Edge. You can still type your answers above.
+        </p>
+      )}
+      {!voiceSupported && (
+        <p className="mt-2 text-xs text-navy/40">
+          Spoken questions need Chrome or Edge. The questions are still shown above.
         </p>
       )}
     </div>
