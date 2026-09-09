@@ -278,6 +278,7 @@ export const preparedAnswers = sqliteTable("prepared_answers", {
 /* ---------------------------------------------------------------------- */
 
 export const interviewSessions = sqliteTable("interview_sessions", {
+  reportError: text("report_error"),
   id: id(),
   userId: text("user_id").notNull(),
   jobId: text("job_id"),

@@ -10,6 +10,7 @@ import {
   postInterviewReports,
 } from "@/db/schema";
 import { and, asc, eq } from "drizzle-orm";
+import { isJobRunning, jobKeys } from "@/lib/jobs";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -33,7 +34,37 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const scores = db.select().from(mockScores).where(eq(mockScores.sessionId, id)).all();
   const report = db.select().from(postInterviewReports).where(eq(postInterviewReports.sessionId, id)).get();
 
-  return NextResponse.json({ session, job, turns, answers, scores, report });
+  // Report generation runs in the background, so the report screen needs to
+  // know whether to keep polling. "failed" covers a genuine error and the
+  // crash case: a session ended with no report and no live job behind it means
+  // the process died mid-generation.
+  const generating = isJobRunning(jobKeys.report(id));
+  const reportStatus = report
+    ? "ready"
+    : generating
+    ? "processing"
+    : session.reportError
+    ? "failed"
+    : session.status === "ended" && turns.length > 0
+    ? "failed"
+    : "none";
+
+  const reportError =
+    reportStatus === "failed"
+      ? session.reportError ??
+        "Report generation stopped unexpectedly (the server restarted). Try again from this page."
+      : null;
+
+  return NextResponse.json({
+    session,
+    job,
+    turns,
+    answers,
+    scores,
+    report,
+    reportStatus,
+    reportError,
+  });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

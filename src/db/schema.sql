@@ -121,6 +121,7 @@ CREATE TABLE `interview_sessions` (
 	`ended_at` integer,
 	`duration_seconds` integer,
 	`status` text DEFAULT 'active',
+	`report_error` text,
 	`overall_score` real,
 	`metadata_json` text
 );

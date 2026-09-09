@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { interviewSessions, interviewTurns, jobs, mockScores, postInterviewReports } from "@/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { generatePostInterviewReport, generateThankYouEmail } from "@/lib/ai/post-interview";
-import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { jobKeys, startJob } from "@/lib/jobs";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -32,8 +32,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         }, 0) / scores.length
       : null;
 
+  // Only stamp the end time once. This endpoint doubles as the retry path for
+  // a failed report, and re-ending would keep inflating the recorded duration.
+  const alreadyEnded = session.status === "ended";
   db.update(interviewSessions)
-    .set({ status: "ended", endedAt: new Date(), durationSeconds, overallScore: overall })
+    .set(
+      alreadyEnded
+        ? { overallScore: overall }
+        : { status: "ended", endedAt: new Date(), durationSeconds, overallScore: overall }
+    )
     .where(eq(interviewSessions.id, id))
     .run();
 
@@ -49,60 +56,67 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ ok: true, report: null });
   }
 
-  // Ending twice (a double-click, a retry after a slow response) previously
-  // inserted a second report and paid for another pair of high-effort calls.
+  // Ending twice (a double-click, a retry after a slow response) must not
+  // insert a second report or pay for another pair of high-effort calls.
   const existingReport = db
     .select()
     .from(postInterviewReports)
     .where(eq(postInterviewReports.sessionId, id))
     .get();
   if (existingReport) {
-    return NextResponse.json({ ok: true, report: existingReport, reused: true });
+    return NextResponse.json({ ok: true, report: existingReport, reportStatus: "ready", reused: true });
   }
 
   const job = session.jobId ? db.select().from(jobs).where(eq(jobs.id, session.jobId)).get() : null;
 
-  try {
-    const report = await generatePostInterviewReport(transcript);
+  // Report generation takes ~45 seconds (a high-effort pass over the whole
+  // transcript, plus the thank-you draft). Ending an interview should not hold
+  // the browser open for that - the candidate has just finished talking and
+  // wants the session closed. Generate in the background; the report screen
+  // polls.
+  db.update(interviewSessions).set({ reportError: null }).where(eq(interviewSessions.id, id)).run();
 
-    // The thank-you draft is a separate, cheaper call. Attempt it on its own so
-    // a rate limit there cannot throw away the report we just paid for; the
-    // user can regenerate the email from the report screen.
-    let thankYou: string | null = null;
-    try {
-      thankYou = await generateThankYouEmail({
-        company: job?.company || "the company",
-        role: job?.jobTitle || "the role",
-        interviewerName: job?.interviewerName || undefined,
-        topicsDiscussed: report.repeated_themes,
-        tone: "professional",
-      });
-    } catch {
-      thankYou = null;
+  const { started } = startJob(
+    jobKeys.report(id),
+    "Generating post-interview report",
+    async () => {
+      const report = await generatePostInterviewReport(transcript);
+
+      // The thank-you draft is a separate, cheaper call. Attempt it on its own
+      // so a rate limit there cannot throw away the report we just paid for;
+      // the report screen can regenerate the email on demand.
+      let thankYou: string | null = null;
+      try {
+        thankYou = await generateThankYouEmail({
+          company: job?.company || "the company",
+          role: job?.jobTitle || "the role",
+          interviewerName: job?.interviewerName || undefined,
+          topicsDiscussed: report.repeated_themes,
+          tone: "professional",
+        });
+      } catch {
+        thankYou = null;
+      }
+
+      db.insert(postInterviewReports)
+        .values({
+          sessionId: id,
+          summary: report.summary,
+          strongMomentsJson: report.strong_moments,
+          concernsJson: report.possible_concerns,
+          repeatedThemesJson: report.repeated_themes,
+          employerDetailsJson: report.employer_details,
+          thankYouDraft: thankYou,
+        })
+        .run();
+    },
+    (message) => {
+      db.update(interviewSessions)
+        .set({ reportError: message.slice(0, 500) })
+        .where(eq(interviewSessions.id, id))
+        .run();
     }
+  );
 
-    const row = db
-      .insert(postInterviewReports)
-      .values({
-        sessionId: id,
-        summary: report.summary,
-        strongMomentsJson: report.strong_moments,
-        concernsJson: report.possible_concerns,
-        repeatedThemesJson: report.repeated_themes,
-        employerDetailsJson: report.employer_details,
-        thankYouDraft: thankYou,
-      })
-      .returning()
-      .get();
-
-    return NextResponse.json({ ok: true, report: row });
-  } catch (err) {
-    // Billing / rate-limit / auth problems are actionable - say what is wrong.
-    if (err instanceof AIServiceError)
-      return NextResponse.json({ error: err.message, actionable: true }, { status: 402 });
-    if (err instanceof AIConfigError) {
-      return NextResponse.json({ ok: true, report: null, error: err.message, needsApiKey: true });
-    }
-    return NextResponse.json({ ok: true, report: null, error: "Report generation failed." });
-  }
+  return NextResponse.json({ ok: true, reportStatus: "processing", started }, { status: 202 });
 }

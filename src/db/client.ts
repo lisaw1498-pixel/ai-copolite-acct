@@ -76,6 +76,9 @@ function connect(): DB {
   for (const t of ["employers", "skills", "technologies", "career_stories"]) {
     ensureColumn(sqlite, t, "source_resume_id", "text");
   }
+  // Post-interview report generation is a background job too, and a background
+  // job has no response to attach a failure to.
+  ensureColumn(sqlite, "interview_sessions", "report_error", "text");
 
   const instance = drizzle(sqlite, { schema });
   if (process.env.NODE_ENV !== "production") {

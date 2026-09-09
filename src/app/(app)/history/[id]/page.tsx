@@ -20,6 +20,8 @@ type SessionDetail = {
     employerDetailsJson: Record<string, string>;
     thankYouDraft: string;
   } | null;
+  reportStatus?: "ready" | "processing" | "failed" | "none";
+  reportError?: string | null;
 };
 
 export default function SessionReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,6 +29,7 @@ export default function SessionReportPage({ params }: { params: Promise<{ id: st
   const [data, setData] = useState<SessionDetail | null>(null);
   const [tone, setTone] = useState<"professional" | "warm" | "concise">("professional");
   const [regenerating, setRegenerating] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/sessions/${id}`);
@@ -36,6 +39,22 @@ export default function SessionReportPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     load();
   }, [load]);
+
+  // The report is generated in the background after the interview ends, so
+  // keep refreshing until it lands rather than showing "no report" to someone
+  // who has just finished an interview.
+  useEffect(() => {
+    if (data?.reportStatus !== "processing") return;
+    const t = setInterval(load, 4000);
+    return () => clearInterval(t);
+  }, [data?.reportStatus, load]);
+
+  async function retryReport() {
+    setRetrying(true);
+    await fetch(`/api/sessions/${id}/end`, { method: "POST" });
+    await load();
+    setRetrying(false);
+  }
 
   async function regenerateEmail(newTone: typeof tone) {
     setTone(newTone);
@@ -152,7 +171,26 @@ export default function SessionReportPage({ params }: { params: Promise<{ id: st
           </Card>
         </>
       ) : (
-        <Card className="p-8 text-center text-sm text-navy/50">No report generated for this session.</Card>
+        <Card className="p-8 text-center text-sm">
+          {data.reportStatus === "processing" ? (
+            <div className="text-navy/60">
+              <p className="font-medium text-navy">Analyzing your interview...</p>
+              <p className="mt-1 text-navy/50">
+                Reading the full transcript and drafting your follow-up email. This takes about a
+                minute — the page updates on its own.
+              </p>
+            </div>
+          ) : data.reportStatus === "failed" ? (
+            <div className="text-navy/60">
+              <p className="text-brand-danger">{data.reportError || "Report generation failed."}</p>
+              <Button className="mt-3" onClick={retryReport} disabled={retrying}>
+                {retrying ? "Retrying..." : "Generate report"}
+              </Button>
+            </div>
+          ) : (
+            <span className="text-navy/50">No report generated for this session.</span>
+          )}
+        </Card>
       )}
     </div>
   );
