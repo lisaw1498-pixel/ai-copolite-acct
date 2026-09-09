@@ -6,7 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { extractTextFromUpload } from "@/lib/parsing";
 import { extractResumeFacts } from "@/lib/ai/extract";
 import { applyExtractedResume, markResumeAnalyzed, markResumeFailed } from "@/lib/facts";
-import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { jobKeys, startJob } from "@/lib/jobs";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -20,6 +20,13 @@ export async function GET() {
   return NextResponse.json({ resumes: rows });
 }
 
+/**
+ * Accepts the upload and returns straight away with a resume id.
+ *
+ * Text extraction and the structured-extraction call together take roughly two
+ * minutes, which no sensible request timeout will tolerate, so both run in the
+ * background. The client polls GET /api/resumes/[id] for status.
+ */
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,17 +36,18 @@ export async function POST(req: Request) {
   const pastedText = form.get("text") as string | null;
   const name = (form.get("name") as string) || file?.name || "Resume";
 
-  let rawText = "";
-  try {
-    if (file) rawText = await extractTextFromUpload(file);
-    else if (pastedText) rawText = pastedText;
-    else return NextResponse.json({ error: "No file or text provided." }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Couldn't read that file. Try PDF, DOCX, or TXT." }, { status: 400 });
+  if (!file && !pastedText?.trim()) {
+    return NextResponse.json({ error: "No file or text provided." }, { status: 400 });
   }
 
-  if (rawText.trim().length < 40) {
-    return NextResponse.json({ error: "That resume looks empty or unreadable." }, { status: 400 });
+  // Read the upload into memory now - the request body is gone once we return.
+  // Parsing it is deferred; only the (fast) read happens here.
+  let bytes: ArrayBuffer | null = null;
+  if (file) {
+    bytes = await file.arrayBuffer();
+    if (bytes.byteLength === 0) {
+      return NextResponse.json({ error: "That file is empty." }, { status: 400 });
+    }
   }
 
   const existingCount = db.select().from(resumes).where(eq(resumes.userId, user.id)).all().length;
@@ -50,32 +58,34 @@ export async function POST(req: Request) {
       userId: user.id,
       name,
       fileName: file?.name,
-      rawText,
+      rawText: pastedText?.trim() || null,
       status: "processing",
       isDefault: existingCount === 0,
     })
     .returning()
     .get();
 
-  try {
-    const extracted = await extractResumeFacts(rawText);
-    markResumeAnalyzed(resume.id, rawText, extracted);
-    applyExtractedResume(user.id, resume.id, extracted, rawText);
-    return NextResponse.json({ resume: { ...resume, status: "analyzed" }, extracted });
-  } catch (err) {
-    markResumeFailed(resume.id);
-    // Billing / rate-limit / auth problems are actionable - say what is wrong.
-    if (err instanceof AIServiceError)
-      return NextResponse.json({ error: err.message, actionable: true }, { status: 402 });
-    if (err instanceof AIConfigError) {
-      return NextResponse.json(
-        { error: err.message, resumeId: resume.id, needsApiKey: true },
-        { status: 424 }
-      );
-    }
-    return NextResponse.json(
-      { error: "AI analysis failed. You can retry from the resume list.", resumeId: resume.id },
-      { status: 500 }
-    );
-  }
+  const fileName = file?.name ?? "resume.txt";
+  const fileType = file?.type ?? "text/plain";
+
+  startJob(
+    jobKeys.resume(resume.id),
+    `Analyzing ${name}`,
+    async () => {
+      let rawText = pastedText?.trim() ?? "";
+      if (bytes) {
+        rawText = await extractTextFromUpload(new File([bytes], fileName, { type: fileType }));
+      }
+      if (rawText.trim().length < 40) {
+        throw new Error("That resume looks empty or unreadable. Try a different file, or paste the text.");
+      }
+      const extracted = await extractResumeFacts(rawText);
+      markResumeAnalyzed(resume.id, rawText, extracted);
+      applyExtractedResume(user.id, resume.id, extracted, rawText);
+    },
+    (message) => markResumeFailed(resume.id, message)
+  );
+
+  // 202: accepted, still working.
+  return NextResponse.json({ resume: { ...resume, status: "processing" } }, { status: 202 });
 }

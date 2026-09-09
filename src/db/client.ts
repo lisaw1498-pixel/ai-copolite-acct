@@ -24,6 +24,19 @@ let cached: DB | undefined;
  * Connecting eagerly meant every worker raced to set `journal_mode = WAL` on
  * the same file and the build died with SQLITE_BUSY.
  */
+
+/**
+ * Adds a column if it is missing. SQLite has no "ADD COLUMN IF NOT EXISTS",
+ * and the schema bootstrap above only runs on a brand-new database, so an
+ * existing local db would never pick up a new column otherwise.
+ */
+function ensureColumn(sqlite: Database.Database, table: string, column: string, ddl: string) {
+  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
+}
+
 function connect(): DB {
   if (cached) return cached;
   if (global.__drizzle__) {
@@ -54,6 +67,14 @@ function connect(): DB {
     // code and doesn't preserve source-relative paths for non-JS assets.
     const schemaSql = fs.readFileSync(path.join(process.cwd(), "src", "db", "schema.sql"), "utf-8");
     sqlite.exec(schemaSql);
+  }
+
+  // Lightweight forward migrations for databases created before a column existed.
+  ensureColumn(sqlite, "resumes", "status_message", "text");
+  // Provenance for AI-derived records, so re-analysis can replace what it
+  // previously produced instead of stacking near-duplicates on top of it.
+  for (const t of ["employers", "skills", "technologies", "career_stories"]) {
+    ensureColumn(sqlite, t, "source_resume_id", "text");
   }
 
   const instance = drizzle(sqlite, { schema });

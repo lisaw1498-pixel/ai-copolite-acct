@@ -109,13 +109,70 @@ export function applyExtractedResume(
       .run();
   }
 
+  // Re-analysis must not stack a second copy of everything on top of the
+  // first. Facts are purely derived from this resume, so they are replaced
+  // outright; the records below are de-duplicated instead of deleted, because
+  // the candidate may have edited them by hand and that work must survive.
+  db.delete(candidateFacts).where(eq(candidateFacts.sourceId, resumeId)).run();
+
+  // Clear the records this same resume generated previously. Matching on names
+  // is not enough - the model rephrases titles between runs ("...Ambulatory
+  // Rollouts" vs "...EHR Rollouts"), so near-duplicates slip through. Rows the
+  // candidate has since edited (updatedAt moved past createdAt) are left alone.
+  const unedited = (row: { createdAt: Date | null; updatedAt: Date | null }) =>
+    !row.updatedAt || !row.createdAt || row.updatedAt.getTime() - row.createdAt.getTime() < 1000;
+
+  for (const row of db.select().from(careerStories).where(eq(careerStories.sourceResumeId, resumeId)).all()) {
+    if (unedited(row)) db.delete(careerStories).where(eq(careerStories.id, row.id)).run();
+  }
+  db.delete(skills).where(eq(skills.sourceResumeId, resumeId)).run();
+  db.delete(technologies).where(eq(technologies.sourceResumeId, resumeId)).run();
+  db.delete(employers).where(eq(employers.sourceResumeId, resumeId)).run();
+
+  const existing = {
+    employers: new Set(
+      db
+        .select()
+        .from(employers)
+        .where(eq(employers.userId, userId))
+        .all()
+        .map((e) => `${e.companyName ?? ""}|${e.jobTitle ?? ""}`.toLowerCase())
+    ),
+    skills: new Set(
+      db
+        .select()
+        .from(skills)
+        .where(eq(skills.userId, userId))
+        .all()
+        .map((r) => (r.skillName ?? "").toLowerCase())
+    ),
+    technologies: new Set(
+      db
+        .select()
+        .from(technologies)
+        .where(eq(technologies.userId, userId))
+        .all()
+        .map((r) => (r.technologyName ?? "").toLowerCase())
+    ),
+    stories: new Set(
+      db
+        .select()
+        .from(careerStories)
+        .where(eq(careerStories.userId, userId))
+        .all()
+        .map((r) => (r.title ?? "").toLowerCase())
+    ),
+  };
+
   // Employers.
   const employerIdByName = new Map<string, string>();
   for (const e of extracted.employers ?? []) {
+    if (existing.employers.has(`${e.company_name}|${e.job_title}`.toLowerCase())) continue;
     const row = db
       .insert(employers)
       .values({
         userId,
+        sourceResumeId: resumeId,
         companyName: e.company_name,
         jobTitle: e.job_title,
         startDate: e.start_date,
@@ -187,9 +244,11 @@ export function applyExtractedResume(
 
   // Suggested skills.
   for (const s of extracted.suggested_skills ?? []) {
+    if (existing.skills.has((s.skill_name ?? "").toLowerCase())) continue;
     db.insert(skills)
       .values({
         userId,
+        sourceResumeId: resumeId,
         skillName: s.skill_name,
         category: s.category,
         yearsExperience: s.years_experience,
@@ -202,9 +261,11 @@ export function applyExtractedResume(
 
   // Suggested technologies.
   for (const t of extracted.suggested_technologies ?? []) {
+    if (existing.technologies.has((t.technology_name ?? "").toLowerCase())) continue;
     db.insert(technologies)
       .values({
         userId,
+        sourceResumeId: resumeId,
         technologyName: t.technology_name,
         category: t.category,
         experienceLevel: t.experience_level || "working_knowledge",
@@ -216,9 +277,11 @@ export function applyExtractedResume(
 
   // Suggested career stories (seeded as drafts the user should review/approve).
   for (const s of extracted.suggested_career_stories ?? []) {
+    if (existing.stories.has((s.title ?? "").toLowerCase())) continue;
     db.insert(careerStories)
       .values({
         userId,
+        sourceResumeId: resumeId,
         title: s.title,
         category: s.category,
         situation: s.situation,
@@ -236,11 +299,20 @@ export function applyExtractedResume(
 
 export function markResumeAnalyzed(resumeId: string, rawText: string, parsed: ExtractedResume) {
   db.update(resumes)
-    .set({ rawText, parsedJson: parsed, status: "analyzed", updatedAt: new Date() })
+    .set({ rawText, parsedJson: parsed, status: "analyzed", statusMessage: null, updatedAt: new Date() })
     .where(eq(resumes.id, resumeId))
     .run();
 }
 
-export function markResumeFailed(resumeId: string) {
-  db.update(resumes).set({ status: "failed", updatedAt: new Date() }).where(eq(resumes.id, resumeId)).run();
+export function markResumeFailed(resumeId: string, message?: string) {
+  db.update(resumes)
+    .set({
+      status: "failed",
+      // Record why. A background job has no response to attach an error to, so
+      // without this the UI can only say "something went wrong".
+      statusMessage: message?.slice(0, 500) ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(resumes.id, resumeId))
+    .run();
 }

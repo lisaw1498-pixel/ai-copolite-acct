@@ -5,7 +5,42 @@ import { resumes } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { extractResumeFacts } from "@/lib/ai/extract";
 import { applyExtractedResume, markResumeAnalyzed, markResumeFailed } from "@/lib/facts";
-import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { isStale, jobKeys, startJob } from "@/lib/jobs";
+
+/**
+ * Status endpoint the upload screen polls while ingestion runs in the
+ * background. Reports "stale" when a row is still marked processing but no job
+ * is actually running - i.e. the server restarted mid-analysis - so the UI can
+ * offer a retry instead of spinning forever.
+ */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+
+  const resume = db
+    .select()
+    .from(resumes)
+    .where(and(eq(resumes.id, id), eq(resumes.userId, user.id)))
+    .get();
+  if (!resume) return NextResponse.json({ error: "Resume not found" }, { status: 404 });
+
+  const stale = isStale(jobKeys.resume(id), resume.status);
+  return NextResponse.json({
+    resume: {
+      id: resume.id,
+      name: resume.name,
+      fileName: resume.fileName,
+      status: stale ? "failed" : resume.status,
+      statusMessage: stale
+        ? "Analysis stopped unexpectedly (the server restarted). Try analyzing again."
+        : resume.statusMessage,
+      isDefault: resume.isDefault,
+      parsed: resume.status === "analyzed" ? resume.parsedJson : null,
+    },
+    done: stale || resume.status === "analyzed" || resume.status === "failed",
+  });
+}
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -33,21 +68,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.action === "reanalyze") {
     const resume = db.select().from(resumes).where(and(eq(resumes.id, id), eq(resumes.userId, user.id))).get();
     if (!resume || !resume.rawText) return NextResponse.json({ error: "Resume not found" }, { status: 404 });
-    try {
-      const extracted = await extractResumeFacts(resume.rawText);
-      markResumeAnalyzed(resume.id, resume.rawText, extracted);
-      applyExtractedResume(user.id, resume.id, extracted);
-      return NextResponse.json({ ok: true, extracted });
-    } catch (err) {
-      markResumeFailed(resume.id);
-      // Billing / rate-limit / auth problems are actionable - say what is wrong.
-      if (err instanceof AIServiceError)
-        return NextResponse.json({ error: err.message, actionable: true }, { status: 402 });
-      if (err instanceof AIConfigError) {
-        return NextResponse.json({ error: err.message, needsApiKey: true }, { status: 424 });
-      }
-      return NextResponse.json({ error: "AI analysis failed." }, { status: 500 });
-    }
+
+    db.update(resumes)
+      .set({ status: "processing", statusMessage: null, updatedAt: new Date() })
+      .where(eq(resumes.id, id))
+      .run();
+
+    const rawText = resume.rawText;
+    const { started } = startJob(
+      jobKeys.resume(id),
+      `Re-analyzing ${resume.name}`,
+      async () => {
+        const extracted = await extractResumeFacts(rawText);
+        markResumeAnalyzed(id, rawText, extracted);
+        applyExtractedResume(user.id, id, extracted, rawText);
+      },
+      (message) => markResumeFailed(id, message)
+    );
+
+    // Already running: report that rather than queueing a duplicate.
+    return NextResponse.json({ ok: true, started, status: "processing" }, { status: 202 });
   }
 
   if (typeof body.name === "string") {

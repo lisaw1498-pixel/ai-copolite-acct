@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, Loader2, CheckCircle2 } from "lucide-react";
+import { pollResumeStatus } from "@/lib/poll-resume";
 
 const STEPS = ["About you", "Upload resume", "Experience library", "Add a job", "Match analysis"];
 
@@ -22,7 +23,9 @@ export default function OnboardingPage() {
     linkedinUrl: "",
   });
 
-  const [resumeStatus, setResumeStatus] = useState<"idle" | "uploading" | "analyzed" | "error">("idle");
+  const [resumeStatus, setResumeStatus] = useState<
+    "idle" | "uploading" | "analyzing" | "analyzed" | "error"
+  >("idle");
   const [resumeError, setResumeError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -54,7 +57,15 @@ export default function OnboardingPage() {
       setResumeStatus("error");
       return;
     }
-    setResumeStatus("analyzed");
+    // The upload only starts the work; analysis continues in the background.
+    setResumeStatus("analyzing");
+    const final = await pollResumeStatus(data.resume.id);
+    if (final.status === "analyzed") {
+      setResumeStatus("analyzed");
+    } else {
+      setResumeError(final.statusMessage || "Analysis failed.");
+      setResumeStatus("error");
+    }
   }
 
   async function submitJob() {
@@ -148,6 +159,12 @@ export default function OnboardingPage() {
                 if (f) uploadResume(f);
               }}
             />
+            {resumeStatus === "analyzing" && (
+              <p className="text-sm text-navy/60">
+                Reading your resume and building your knowledge base. This takes a minute or two -
+                you can leave this page open.
+              </p>
+            )}
             {resumeStatus === "uploading" && (
               <p className="flex items-center justify-center gap-2 text-sm text-navy/60">
                 <Loader2 className="animate-spin" size={16} /> Analyzing...
@@ -168,7 +185,7 @@ export default function OnboardingPage() {
           </div>
           <div className="mt-6 flex justify-between">
             <Button variant="ghost" onClick={() => setStep(2)}>Skip for now</Button>
-            <Button onClick={() => setStep(2)} disabled={resumeStatus === "uploading"}>
+            <Button onClick={() => setStep(2)} disabled={resumeStatus === "uploading" || resumeStatus === "analyzing"}>
               {resumeStatus === "analyzed" ? "Review My Profile → Continue" : "Continue"}
             </Button>
           </div>

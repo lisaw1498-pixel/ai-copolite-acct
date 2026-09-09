@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { pollResumeStatus } from "@/lib/poll-resume";
 import { PageHeader } from "@/components/page-header";
 import { UploadCloud, FileText, Star, Trash2, RefreshCw, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +14,7 @@ type Resume = {
   fileName: string | null;
   isDefault: boolean;
   status: "processing" | "analyzed" | "failed";
+  statusMessage?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -54,15 +56,33 @@ export default function ResumeManagerPage() {
     setPastedText("");
     setShowPaste(false);
     await load();
+
+    // Analysis continues in the background - refresh the row as it progresses
+    // so the card moves from Processing to Analyzed on its own.
+    const final = await pollResumeStatus(data.resume.id, () => {
+      void load();
+    });
+    if (final.status === "failed" && final.statusMessage) setError(final.statusMessage);
+    await load();
   }
 
   async function act(id: string, action: string) {
+    setError(null);
     await fetch(`/api/resumes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
     await load();
+
+    // Re-analysis is a background job too.
+    if (action === "reanalyze") {
+      const final = await pollResumeStatus(id, () => {
+        void load();
+      });
+      if (final.status === "failed" && final.statusMessage) setError(final.statusMessage);
+      await load();
+    }
   }
 
   async function remove(id: string) {
@@ -176,9 +196,15 @@ export default function ResumeManagerPage() {
                         <CheckCircle2 size={12} /> Resume Successfully Analyzed
                       </span>
                     )}
-                    {r.status === "processing" && "Processing..."}
+                    {r.status === "processing" && (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> Analyzing your experience...
+                      </span>
+                    )}
                     {r.status === "failed" && (
-                      <span className="text-brand-danger">Analysis failed — retry below</span>
+                      <span className="text-brand-danger">
+                        {r.statusMessage || "Analysis failed"} — retry below
+                      </span>
                     )}
                   </p>
                 </div>

@@ -245,6 +245,7 @@ CREATE TABLE `resumes` (
 	`parsed_json` text,
 	`is_default` integer DEFAULT false,
 	`status` text DEFAULT 'processing',
+	`status_message` text,
 	`created_at` integer,
 	`updated_at` integer
 );

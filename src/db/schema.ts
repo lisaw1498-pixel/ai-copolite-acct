@@ -56,6 +56,7 @@ export const resumes = sqliteTable("resumes", {
   parsedJson: text("parsed_json", { mode: "json" }),
   isDefault: integer("is_default", { mode: "boolean" }).default(false),
   status: text("status").default("processing"), // processing | analyzed | failed
+  statusMessage: text("status_message"), // why it failed, shown to the user
   createdAt: now(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()),
 });
@@ -71,6 +72,7 @@ export const candidateProfiles = sqliteTable("candidate_profiles", {
 });
 
 export const employers = sqliteTable("employers", {
+  sourceResumeId: text("source_resume_id"),
   id: id(),
   userId: text("user_id").notNull(),
   companyName: text("company_name").notNull(),
@@ -101,6 +103,7 @@ export const experiences = sqliteTable("experiences", {
 /* ---------------------------------------------------------------------- */
 
 export const careerStories = sqliteTable("career_stories", {
+  sourceResumeId: text("source_resume_id"),
   id: id(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
@@ -123,6 +126,7 @@ export const careerStories = sqliteTable("career_stories", {
 });
 
 export const skills = sqliteTable("skills", {
+  sourceResumeId: text("source_resume_id"),
   id: id(),
   userId: text("user_id").notNull(),
   skillName: text("skill_name").notNull(),
@@ -136,6 +140,7 @@ export const skills = sqliteTable("skills", {
 });
 
 export const technologies = sqliteTable("technologies", {
+  sourceResumeId: text("source_resume_id"),
   id: id(),
   userId: text("user_id").notNull(),
   technologyName: text("technology_name").notNull(),
