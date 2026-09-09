@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2 } from "lucide-react";
+import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2, Lightbulb, ShieldCheck } from "lucide-react";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { useSpeechSynthesis } from "@/lib/use-speech-synthesis";
 
@@ -31,6 +31,15 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   const spokenRef = useRef<Set<string>>(new Set());
   const wasListeningRef = useRef(false);
   const primedRef = useRef(false);
+  const bootstrappedRef = useRef(false);
+
+  // Coaching mode: show a grounded suggested answer for the question just
+  // asked, so the candidate can read it aloud and practise saying it.
+  const [coachOn, setCoachOn] = useState(true);
+  const [suggestion, setSuggestion] = useState("");
+  const [suggestionCues, setSuggestionCues] = useState<{ label: string; value: string }[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const suggestedForRef = useRef<string | null>(null);
 
   const { start, stop, listening, supported } = useSpeechRecognition((text, isFinal) => {
     if (isFinal) setAnswer((prev) => (prev ? prev + " " + text : text));
@@ -50,6 +59,11 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   }, [id, refresh]);
 
   useEffect(() => {
+    // Guard against this effect running twice (React re-invokes mount effects
+    // in development). Without it the interview opened with the same question
+    // asked twice, and paid for two model calls to do it.
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
     (async () => {
       const res = await fetch(`/api/sessions/${id}`);
       const data = await res.json();
@@ -111,6 +125,74 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, voiceOn, voiceSupported]);
 
+  const fetchSuggestion = useCallback(
+    async (question: string) => {
+      setSuggesting(true);
+      setSuggestion("");
+      setSuggestionCues([]);
+      try {
+        const res = await fetch(`/api/sessions/${id}/suggest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        if (!res.ok || !res.body) {
+          setSuggestion("Couldn't load a suggested answer.");
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamed = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let split;
+          while ((split = buffer.indexOf("\n\n")) !== -1) {
+            const frame = buffer.slice(0, split);
+            buffer = buffer.slice(split + 2);
+            const lines = frame.split("\n");
+            const ev = lines.find((l) => l.startsWith("event: "))?.slice(7).trim();
+            const dataLine = lines.find((l) => l.startsWith("data: "));
+            if (!ev || !dataLine) continue;
+            const payload = JSON.parse(dataLine.slice(6));
+            if (ev === "delta") {
+              streamed += payload.text;
+              setSuggestion(streamed);
+            } else if (ev === "cues") {
+              setSuggestionCues((payload.remember_this ?? []).slice(0, 6));
+            } else if (ev === "final") {
+              setSuggestion(payload.generated.say_this);
+              setSuggestionCues((payload.generated.remember_this ?? []).slice(0, 6));
+            } else if (ev === "error") {
+              setSuggestion(payload.error || "Couldn't suggest an answer.");
+            }
+          }
+        }
+      } catch {
+        setSuggestion("Couldn't load a suggested answer.");
+      } finally {
+        setSuggesting(false);
+      }
+    },
+    [id]
+  );
+
+  // Suggest an answer for each new question, once.
+  useEffect(() => {
+    if (!coachOn) return;
+    const latest = [...turns].reverse().find((t) => t.speaker === "ai_interviewer");
+    const text = latest?.cleanedTranscript || latest?.rawTranscript || "";
+    if (!latest || !text.trim()) return;
+    // Only for the question currently awaiting an answer.
+    if (turns[turns.length - 1]?.id !== latest.id) return;
+    if (suggestedForRef.current === latest.id) return;
+    suggestedForRef.current = latest.id;
+    void fetchSuggestion(text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turns, coachOn]);
+
   function toggleVoice() {
     const next = !voiceOn;
     setVoiceOn(next);
@@ -163,6 +245,13 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
           <h1 className="text-lg font-semibold text-navy">Practice Session</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setCoachOn((v) => !v)}
+            title={coachOn ? "Hide suggested answers" : "Show a suggested answer for each question"}
+          >
+            <Lightbulb size={15} /> {coachOn ? "Coaching On" : "Coaching Off"}
+          </Button>
           {voiceSupported && (
             <>
               <Button
@@ -209,6 +298,47 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
         )}
         <div ref={bottomRef} />
       </Card>
+
+      {coachOn && (suggesting || suggestion) && (
+        <Card className="mt-4 border-brand-blue/30 bg-blue-50/40 p-4">
+          <div className="flex items-center gap-1.5">
+            <Lightbulb size={13} className="text-brand-blue" />
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-blue">
+              Say this — practise reading it aloud
+            </p>
+          </div>
+
+          {suggesting && !suggestion && (
+            <p className="mt-2 text-sm text-navy/50">Finding your strongest verified experience...</p>
+          )}
+          {suggestion && (
+            <p className="mt-2 text-sm leading-relaxed text-navy">
+              {suggestion}
+              {suggesting && <span className="ml-0.5 inline-block animate-pulse text-brand-blue">▍</span>}
+            </p>
+          )}
+
+          {suggestionCues.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {suggestionCues.map((cue, i) => (
+                <span
+                  key={i}
+                  className="rounded-full border border-surface-border bg-white px-2 py-0.5 text-[11px] text-navy/70"
+                >
+                  <span className="font-semibold text-navy/40">{cue.label}:</span> {cue.value}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {suggestion && !suggesting && (
+            <p className="mt-3 flex items-center gap-1 text-[11px] text-brand-success">
+              <ShieldCheck size={12} /> Grounded in your verified experience — say it in your own
+              words, don't recite it.
+            </p>
+          )}
+        </Card>
+      )}
 
       <div className="mt-4 flex items-end gap-2">
         <textarea
