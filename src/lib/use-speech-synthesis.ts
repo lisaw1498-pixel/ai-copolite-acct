@@ -6,22 +6,40 @@ export function isSpeechSynthesisSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
 
+// Voices don't expose a gender field, so this matches on the names browsers
+// actually ship. Ordered best-sounding first: the "Natural"/"Online" voices
+// are network-backed and markedly clearer than the older local ones.
+const FEMALE_VOICE_PATTERNS = [
+  /(aria|jenny|michelle|ava|emma|sonia|libby|clara|natasha).*(natural|online)/i,
+  /(natural|online).*(aria|jenny|michelle|ava|emma|sonia|libby|clara|natasha)/i,
+  /google (us|uk) english/i,
+  /\b(samantha|karen|moira|tessa|fiona|serena|allison|susan|victoria)\b/i,
+  /\b(zira|hazel|linda|heera|catherine)\b/i,
+  /\bfemale\b/i,
+];
+
+// Names that are definitely male, so a generic fallback never lands on one
+// when a female voice was asked for.
+const MALE_VOICE_PATTERN =
+  /\b(david|mark|george|guy|ryan|christopher|eric|brandon|daniel|alex|fred|james|paul|richard|thomas|william|oliver|liam|male)\b/i;
+
 /**
- * Picks the most natural-sounding English voice available.
+ * Picks the clearest available female English voice.
  *
- * Browsers ship a mix of low-quality local voices and better network ones.
- * The network voices (Google, Microsoft Natural/Online) sound markedly more
- * like a person, which matters here - the point of hearing the question is to
- * practise under something closer to real conditions.
+ * Falls back to any non-male English voice, then to whatever exists - a
+ * robotic voice is still better than silence, and voice availability varies a
+ * lot between machines and browsers.
  */
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   const english = voices.filter((v) => v.lang?.toLowerCase().startsWith("en"));
   if (english.length === 0) return voices[0] ?? null;
-  const preferred = [/natural/i, /google us english/i, /google uk english/i, /online/i, /aria|jenny|guy/i];
-  for (const pattern of preferred) {
-    const hit = english.find((v) => pattern.test(v.name));
+
+  for (const pattern of FEMALE_VOICE_PATTERNS) {
+    const hit = english.find((v) => pattern.test(v.name) && !MALE_VOICE_PATTERN.test(v.name));
     if (hit) return hit;
   }
+  const notMale = english.find((v) => !MALE_VOICE_PATTERN.test(v.name));
+  if (notMale) return notMale;
   return english.find((v) => v.default) ?? english[0];
 }
 
@@ -75,7 +93,7 @@ export function useSpeechSynthesis() {
         if (voice) utterance.voice = voice;
         // Slightly under default: interviewers don't rattle through questions,
         // and it gives the listener time to actually process what was asked.
-        utterance.rate = opts.rate ?? 0.95;
+        utterance.rate = opts.rate ?? 0.92;
         utterance.pitch = 1;
 
         const finish = () => {

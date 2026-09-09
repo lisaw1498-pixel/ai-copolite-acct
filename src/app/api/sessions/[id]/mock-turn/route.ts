@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/db/client";
-import { interviewSessions, interviewTurns, jobs, mockScores } from "@/db/schema";
+import { interviewQuestions, interviewSessions, interviewTurns, jobRequirements, jobs, mockScores } from "@/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { nextMockInterviewerTurn, scoreMockAnswer } from "@/lib/ai/mock-interviewer";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { getUserFacts, getUserStories } from "@/lib/facts";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -19,7 +20,65 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .get();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
   const job = session.jobId ? db.select().from(jobs).where(eq(jobs.id, session.jobId)).get() : null;
-  const config = (session.configJson || {}) as { interviewType?: string; difficulty?: string };
+  const config = (session.configJson || {}) as {
+    interviewType?: string;
+    difficulty?: string;
+    useJobDescription?: boolean;
+    useResume?: boolean;
+    verifiedOnly?: boolean;
+  };
+
+  // The setup screen's "Use Job Description" / "Use My Resume" toggles were
+  // being stored and then ignored - the interviewer only ever saw the job
+  // title. Feed it the real posting, the real requirements (including where
+  // this candidate is weak), the verified background, and the questions
+  // already predicted for this role, so practising here rehearses the
+  // interview they are actually walking into.
+  const useJd = config.useJobDescription !== false;
+  const useResume = config.useResume !== false;
+
+  const requirements =
+    useJd && session.jobId
+      ? db
+          .select()
+          .from(jobRequirements)
+          .where(eq(jobRequirements.jobId, session.jobId))
+          .all()
+          .map((r) => ({
+            requirement: r.requirement,
+            priority: r.priority || "required",
+            candidateMatch: r.candidateMatch,
+          }))
+      : [];
+
+  const likelyQuestions =
+    session.jobId
+      ? db
+          .select()
+          .from(interviewQuestions)
+          .where(eq(interviewQuestions.jobId, session.jobId))
+          .all()
+          .map((q) => q.question)
+      : [];
+
+  let candidateSummary: string | null = null;
+  if (useResume) {
+    const verifiedOnly = config.verifiedOnly !== false;
+    const facts = getUserFacts(user.id).filter(
+      (f) => !verifiedOnly || f.verificationStatus.startsWith("verified_") || f.verificationStatus === "transferable"
+    );
+    const stories = getUserStories(user.id);
+    const factLines = facts
+      .slice(0, 70)
+      .map((f) => `- (${f.factType}) ${f.factValue}`)
+      .join("\n");
+    const storyLines = stories
+      .map((st) => `- ${st.title}${st.metrics ? ` (${st.metrics})` : ""}`)
+      .join("\n");
+    candidateSummary = [factLines && `FACTS:\n${factLines}`, storyLines && `CAREER STORIES:\n${storyLines}`]
+      .filter(Boolean)
+      .join("\n\n");
+  }
 
   let candidateTurn = null;
   if (body.candidateAnswer?.trim()) {
@@ -73,6 +132,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       interviewType: config.interviewType || "behavioral",
       jobTitle: job?.jobTitle,
       company: job?.company,
+      jobDescription: useJd ? job?.jobDescriptionRaw ?? null : null,
+      requirements,
+      candidateSummary,
+      likelyQuestions,
       transcript,
     });
 
