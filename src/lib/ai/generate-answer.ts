@@ -53,7 +53,7 @@ function buildPrompt(input: GenerateAnswerInput): string {
       : input.answerStyle === "star"
       ? "Structure say_this explicitly as Situation, then Task, then Action, then Result - still spoken aloud in natural prose, not labelled out loud."
       : input.answerStyle === "natural"
-      ? "Make this sound markedly more conversational and spoken - contractions, plain words, the way someone actually talks in a room. No corporate register."
+      ? "Push the spoken register further than usual. Looser, more off-the-cuff, the way someone talks when they are relaxed and thinking out loud. More fragments, more connective tissue (\"I mean\", \"you know\", \"honestly\"), less structure. It should sound almost unrehearsed."
       : "";
 
   const storyHint = input.preferredStoryId
