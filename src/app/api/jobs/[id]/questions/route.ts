@@ -6,6 +6,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { generateInterviewQuestions } from "@/lib/ai/questions";
 import { getUserFacts, resolveResumeId } from "@/lib/facts";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { stripWrappingQuotes } from "@/lib/strip-quotes";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -33,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const question: string = (body.question ?? "").trim();
+  const question: string = stripWrappingQuotes(String(body.question ?? "")).trim();
   if (!question) return NextResponse.json({ error: "Question text is required" }, { status: 400 });
 
   const job = db.select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.userId, user.id))).get();

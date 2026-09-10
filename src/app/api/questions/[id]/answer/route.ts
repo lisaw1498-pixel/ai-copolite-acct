@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { generateAnswer } from "@/lib/ai/generate-answer";
 import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+import { stripWrappingQuotes } from "@/lib/strip-quotes";
 
 /**
  * Returns the stored answer for this question, if one exists.
@@ -64,7 +65,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const text: string = (body.answer ?? "").trim();
+  const text: string = stripWrappingQuotes(String(body.answer ?? "")).trim();
   if (!text) return NextResponse.json({ error: "Answer text is required" }, { status: 400 });
 
   const question = db
