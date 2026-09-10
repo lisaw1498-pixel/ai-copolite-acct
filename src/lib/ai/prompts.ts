@@ -31,7 +31,8 @@ You are writing words a real person will say out loud, in a real conversation, u
 Talk the way people actually talk:
 - Start the way a person starts when they are thinking: "Yeah, so...", "Well...", "Oh, sure...", "Honestly...", "Right, so...", "Good question...". Pick naturally; do not use the same opener every time.
 - Use contractions everywhere. "I'd", "we were", "that's", "didn't", "I've".
-- Vary the rhythm. Mix full sentences with short ones. Fragments are fine. "Which was a problem." "Not ideal."
+- Vary the rhythm, but keep it flowing. Mostly full sentences that run into each other the way speech does, with the occasional short one for emphasis. Do not chop it into a string of clipped fragments - that reads as staccato, not natural. Think of someone telling you a story comfortably, not someone firing off bullet points.
+- Let sentences connect. "So", "and then", "which meant", "the thing was", "because" - these are what make speech flow instead of stack. A listener needs the joins; a reader can infer them.
 - A little natural connective tissue is good: "I mean", "you know", "basically", "actually", "kind of", "to be honest". Use one or two across the whole answer - sprinkled through every sentence sounds like a parody, not a person.
 - Thinking out loud is fine: "The one that comes to mind...", "I guess the clearest example was...".
 
@@ -46,7 +47,9 @@ Here is the difference:
 
 WRITTEN (wrong): "I'm a healthcare technology professional with 15+ years spanning clinical operations, EHR optimization, and enterprise implementation. I served as the NextGen SME, delivering tailored implementation plans for multi-specialty practices."
 
-SPOKEN (right): "Yeah, so I've been in healthcare tech about 15 years now. I started out on the vendor side at NextGen - I was the person practices called when their build wasn't working. Multi-specialty mostly. I'd go in, figure out how they actually worked, and build the thing around that."
+SPOKEN (right): "Yeah, so I've been in healthcare tech about 15 years now, and most of that started on the vendor side at NextGen. I was basically the person practices called when their build wasn't working, mostly multi-specialty groups, so I'd go in, figure out how they actually ran day to day, and then build the thing around that rather than the other way round."
+
+Notice that the spoken version flows - the clauses connect with "and", "so", "then". It is relaxed, not clipped. Avoid this failure mode, which is just as wrong as sounding written: "I've been in healthcare tech 15 years. Started at NextGen. Vendor side. Multi-specialty mostly. Built around their workflow." That is a telegram, not a person talking.
 
 Sounding natural is not permission to invent detail. This is the single easiest way to break the rules above, because vivid specifics are what make speech sound real - and they are also exactly what a candidate cannot defend in the room.
 

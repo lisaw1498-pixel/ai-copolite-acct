@@ -6,6 +6,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { nextMockInterviewerTurn, scoreMockAnswer } from "@/lib/ai/mock-interviewer";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
 import { getUserFacts, getUserStories } from "@/lib/facts";
+import { startJob } from "@/lib/jobs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -103,28 +104,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .map((t) => ({ speaker: t.speaker, text: t.cleanedTranscript || t.rawTranscript || "" }));
 
   try {
-    let score = null;
+    // Score the previous answer in the background.
+    //
+    // Scoring only feeds the post-interview report - the conversation does not
+    // need it to continue. Awaiting it here put a second model call in front of
+    // every question, so the interviewer took ~12 seconds to come back. Nobody
+    // sits in silence that long in a real interview.
     if (candidateTurn && body.lastQuestion) {
-      try {
-        const s = await scoreMockAnswer(body.lastQuestion, body.candidateAnswer, job?.jobTitle);
-        score = db
-          .insert(mockScores)
-          .values({
-            sessionId: id,
-            interviewTurnId: candidateTurn.id,
-            relevanceScore: s.relevance_score,
-            clarityScore: s.clarity_score,
-            starScore: s.star_score,
-            metricsScore: s.metrics_score,
-            concisenessScore: s.conciseness_score,
-            jobAlignmentScore: s.job_alignment_score,
-            feedbackJson: s.feedback,
-          })
-          .returning()
-          .get();
-      } catch {
-        // Scoring is best-effort; don't block the interviewer's next turn.
-      }
+      const turnId = candidateTurn.id;
+      const question: string = body.lastQuestion;
+      const answer: string = body.candidateAnswer;
+      const jobTitle = job?.jobTitle;
+      startJob(
+        `score:${turnId}`,
+        "Scoring answer",
+        async () => {
+          const sc = await scoreMockAnswer(question, answer, jobTitle);
+          db.insert(mockScores)
+            .values({
+              sessionId: id,
+              interviewTurnId: turnId,
+              relevanceScore: sc.relevance_score,
+              clarityScore: sc.clarity_score,
+              starScore: sc.star_score,
+              metricsScore: sc.metrics_score,
+              concisenessScore: sc.conciseness_score,
+              jobAlignmentScore: sc.job_alignment_score,
+              feedbackJson: sc.feedback,
+            })
+            .run();
+        },
+        () => {
+          // Scoring is best-effort; a missing score costs one row in the
+          // report, and must never interrupt the interview.
+        }
+      );
     }
 
     const nextTurn = await nextMockInterviewerTurn({
@@ -153,7 +167,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .returning()
       .get();
 
-    return NextResponse.json({ interviewerTurn, score, shouldEnd: nextTurn.should_end });
+    return NextResponse.json({ interviewerTurn, shouldEnd: nextTurn.should_end });
   } catch (err) {
     // Billing / rate-limit / auth problems are actionable - say what is wrong.
     if (err instanceof AIServiceError)
