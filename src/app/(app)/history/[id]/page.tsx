@@ -20,7 +20,7 @@ type SessionDetail = {
     employerDetailsJson: Record<string, string>;
     thankYouDraft: string;
   } | null;
-  reportStatus?: "ready" | "processing" | "failed" | "none";
+  reportStatus?: "ready" | "processing" | "failed" | "not_enough" | "none";
   reportError?: string | null;
 };
 
@@ -178,6 +178,15 @@ export default function SessionReportPage({ params }: { params: Promise<{ id: st
               <p className="mt-1 text-navy/50">
                 Reading the full transcript and drafting your follow-up email. This takes about a
                 minute — the page updates on its own.
+              </p>
+            </div>
+          ) : data.reportStatus === "not_enough" ? (
+            <div className="text-navy/60">
+              <p className="font-medium text-navy">Not enough of the interview to report on</p>
+              <p className="mt-1 text-navy/50">
+                This session ended before you answered anything, so there is nothing to review. A
+                report is built from what you actually said — run the interview again and answer a
+                few questions.
               </p>
             </div>
           ) : data.reportStatus === "failed" ? (

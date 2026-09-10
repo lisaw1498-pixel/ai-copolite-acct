@@ -52,15 +52,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           }))
       : [];
 
-  const likelyQuestions =
-    session.jobId
-      ? db
-          .select()
-          .from(interviewQuestions)
-          .where(eq(interviewQuestions.jobId, session.jobId))
-          .all()
-          .map((q) => q.question)
-      : [];
+  // Questions the candidate wrote themselves are the ones they are actually
+  // rehearsing, and they have written answers to match. Keep them separate
+  // from the AI-predicted ones so the interviewer can ask them as written
+  // rather than folding them into a general pool and rephrasing them.
+  const allQuestions = session.jobId
+    ? db.select().from(interviewQuestions).where(eq(interviewQuestions.jobId, session.jobId)).all()
+    : [];
+  const myQuestions = allQuestions.filter((q) => !q.generated).map((q) => q.question);
+  const likelyQuestions = allQuestions.filter((q) => q.generated).map((q) => q.question);
 
   let candidateSummary: string | null = null;
   if (useResume) {
@@ -155,6 +155,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       interviewer: job
         ? { name: job.interviewerName, role: job.interviewerRole, notes: job.interviewerNotes }
         : undefined,
+      myQuestions,
       likelyQuestions,
       transcript,
     });

@@ -1,12 +1,38 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/db/client";
-import { interviewSessions, jobs } from "@/db/schema";
+import { interviewQuestions, interviewSessions, jobs, preparedAnswers } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { generateAnswerStreaming } from "@/lib/ai/generate-answer";
 import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { rankFacts, rankStories } from "@/lib/retrieval";
+import { matchPreparedQuestion } from "@/lib/match-prepared";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream; charset=utf-8",
+  "Cache-Control": "no-cache, no-transform",
+  "X-Accel-Buffering": "no",
+};
+
+/**
+ * Sends a complete answer down the same event stream the streaming path uses,
+ * so the client needs no separate code path for a prepared answer.
+ */
+function sseOnce(payload: { delta: string; cues: unknown; final: unknown }): Response {
+  const encoder = new TextEncoder();
+  const frame = (event: string, data: unknown) =>
+    encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(frame("delta", { text: payload.delta }));
+      controller.enqueue(frame("cues", payload.cues));
+      controller.enqueue(frame("final", payload.final));
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: SSE_HEADERS });
+}
 
 /**
  * Suggests a grounded answer to the question the mock interviewer just asked,
@@ -32,6 +58,60 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .where(and(eq(interviewSessions.id, id), eq(interviewSessions.userId, user.id)))
     .get();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+
+  /**
+   * If the candidate already wrote an answer to this question, show them that.
+   *
+   * They prepared and approved these for this interview - regenerating a fresh
+   * answer here meant they practised against wording they had never seen, and
+   * the answers they actually wrote were never surfaced at all. Their own words
+   * are also verified by definition, so there is nothing to ground or check.
+   */
+  if (session.jobId) {
+    const prepared = db
+      .select({
+        question: interviewQuestions.question,
+        short: preparedAnswers.shortAnswer,
+        standard: preparedAnswers.standardAnswer,
+        long: preparedAnswers.longAnswer,
+      })
+      .from(interviewQuestions)
+      .innerJoin(preparedAnswers, eq(preparedAnswers.questionId, interviewQuestions.id))
+      .where(
+        and(
+          eq(interviewQuestions.jobId, session.jobId),
+          eq(interviewQuestions.userId, user.id),
+          eq(preparedAnswers.approved, true)
+        )
+      )
+      .all();
+
+    const wanted: "short" | "standard" | "long" =
+      body.responseLength === "short" ? "short" : body.responseLength === "long" ? "long" : "standard";
+
+    const usable = prepared
+      .map((p) => ({
+        question: p.question,
+        // Fall back across lengths: an answer written only at standard length
+        // is still the answer they prepared.
+        text: (p[wanted] || p.standard || p.long || p.short || "").trim(),
+      }))
+      .filter((p) => p.text.length > 0);
+
+    const hit = matchPreparedQuestion(question, usable.map((p) => ({ item: p, question: p.question })));
+    if (hit) {
+      return sseOnce({
+        delta: hit.item.text,
+        cues: { remember_this: [], grounding: "prepared" },
+        final: {
+          generated: { say_this: hit.item.text, remember_this: [] },
+          corrected: false,
+          source: "prepared",
+          matchedQuestion: hit.item.question,
+        },
+      });
+    }
+  }
 
   const job = session.jobId ? db.select().from(jobs).where(eq(jobs.id, session.jobId)).get() : null;
   const jobContext = job
@@ -79,11 +159,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  return new Response(stream, { headers: SSE_HEADERS });
 }

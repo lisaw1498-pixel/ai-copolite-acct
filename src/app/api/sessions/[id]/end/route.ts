@@ -52,8 +52,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .all()
     .map((t) => ({ speaker: t.speaker, text: t.cleanedTranscript || t.rawTranscript || "" }));
 
-  if (transcript.length === 0) {
-    return NextResponse.json({ ok: true, report: null });
+  /**
+   * A report needs the candidate to have actually said something.
+   *
+   * The old guard only caught a completely empty transcript, so a session that
+   * was ended after the opening question still went to the model - which was
+   * then asked for "the candidate's strongest moments" with no candidate
+   * speech in front of it. It answered by inventing the entire interview,
+   * several thousand words of experience this candidate never claimed, and the
+   * only reason that surfaced as an error was that the invention wasn't valid
+   * JSON. Silently grading a fabricated transcript is the worse outcome.
+   */
+  const candidateTurns = transcript.filter(
+    (t) => t.speaker === "candidate" && t.text.trim().length > 0
+  );
+  if (candidateTurns.length === 0) {
+    return NextResponse.json({ ok: true, report: null, reason: "no_candidate_answers" });
   }
 
   // Ending twice (a double-click, a retry after a slow response) must not

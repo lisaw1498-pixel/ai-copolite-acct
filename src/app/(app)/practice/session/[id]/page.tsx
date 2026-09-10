@@ -39,6 +39,9 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   const [suggestion, setSuggestion] = useState("");
   const [suggestionCues, setSuggestionCues] = useState<{ label: string; value: string }[]>([]);
   const [suggesting, setSuggesting] = useState(false);
+  // Whether what is on screen is the answer the candidate wrote for this
+  // question, rather than one generated just now.
+  const [suggestionSource, setSuggestionSource] = useState<"prepared" | "generated">("generated");
   const suggestedForRef = useRef<string | null>(null);
 
   const { start, stop, listening, supported } = useSpeechRecognition((text, isFinal) => {
@@ -130,6 +133,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
       setSuggesting(true);
       setSuggestion("");
       setSuggestionCues([]);
+      setSuggestionSource("generated");
       try {
         const res = await fetch(`/api/sessions/${id}/suggest`, {
           method: "POST",
@@ -165,6 +169,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
             } else if (ev === "final") {
               setSuggestion(payload.generated.say_this);
               setSuggestionCues((payload.generated.remember_this ?? []).slice(0, 6));
+              if (payload.source === "prepared") setSuggestionSource("prepared");
             } else if (ev === "error") {
               setSuggestion(payload.error || "Couldn't suggest an answer.");
             }
@@ -304,7 +309,9 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-1.5">
             <Lightbulb size={13} className="text-brand-blue" />
             <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-blue">
-              Say this — practise reading it aloud
+              {suggestionSource === "prepared"
+                ? "Your prepared answer — practise reading it aloud"
+                : "Say this — practise reading it aloud"}
             </p>
           </div>
 
@@ -333,8 +340,10 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
 
           {suggestion && !suggesting && (
             <p className="mt-3 flex items-center gap-1 text-[11px] text-brand-success">
-              <ShieldCheck size={12} /> Grounded in your verified experience — say it in your own
-              words, don't recite it.
+              <ShieldCheck size={12} />{" "}
+              {suggestionSource === "prepared"
+                ? "This is the answer you wrote and approved for this question."
+                : "Grounded in your verified experience — say it in your own words, don't recite it."}
             </p>
           )}
         </Card>
