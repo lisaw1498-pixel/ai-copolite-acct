@@ -8,6 +8,20 @@ export function isSpeechSynthesisSupported(): boolean {
 
 /** Where the chosen voice is remembered between sessions. */
 const VOICE_PREF_KEY = "interviewerVoice";
+const VOICE_RATE_KEY = "interviewerRate";
+
+/**
+ * Default speaking pace.
+ *
+ * A real interviewer talks at a conversational clip, not a measured one. This
+ * used to sit under 1.0 on the theory that slower is easier to follow, but the
+ * effect is the opposite: an unhurried synthetic voice sounds laboured and is
+ * harder to listen to, not easier.
+ */
+export const DEFAULT_RATE = 1.1;
+
+/** Pace options offered in the interface, slowest first. */
+export const RATE_CHOICES = [0.9, 1, 1.1, 1.25, 1.4, 1.6] as const;
 
 // The neural voices. Edge exposes these ("Microsoft Aria Online (Natural) -
 // English (United States)") and they sound like a person; the older local SAPI
@@ -120,6 +134,7 @@ export function useSpeechSynthesis() {
   const [speaking, setSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [preferredUri, setPreferredUri] = useState<string | null>(null);
+  const [rate, setRate] = useState<number>(DEFAULT_RATE);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -128,6 +143,8 @@ export function useSpeechSynthesis() {
 
     try {
       setPreferredUri(localStorage.getItem(VOICE_PREF_KEY));
+      const savedRate = Number(localStorage.getItem(VOICE_RATE_KEY));
+      if (Number.isFinite(savedRate) && savedRate > 0) setRate(savedRate);
     } catch {
       // Private mode or blocked storage - the default voice is fine.
     }
@@ -156,6 +173,16 @@ export function useSpeechSynthesis() {
     try {
       if (voiceURI) localStorage.setItem(VOICE_PREF_KEY, voiceURI);
       else localStorage.removeItem(VOICE_PREF_KEY);
+    } catch {
+      // Not persisting is survivable; the choice still applies this session.
+    }
+  }, []);
+
+  /** Remembers a speaking pace, for this and future interviews. */
+  const chooseRate = useCallback((next: number) => {
+    setRate(next);
+    try {
+      localStorage.setItem(VOICE_RATE_KEY, String(next));
     } catch {
       // Not persisting is survivable; the choice still applies this session.
     }
@@ -193,7 +220,7 @@ export function useSpeechSynthesis() {
           if (voice) utterance.voice = voice;
           // Just under conversational pace. Interviewers do not rattle through
           // questions, and it gives the listener time to process the question.
-          utterance.rate = opts.rate ?? 0.95;
+          utterance.rate = opts.rate ?? rate;
           utterance.pitch = 1;
           utterance.onend = next;
           // One chunk failing should not swallow the rest of the question.
@@ -204,7 +231,7 @@ export function useSpeechSynthesis() {
         setSpeaking(true);
         next();
       }),
-    [preferredUri]
+    [preferredUri, rate]
   );
 
   return {
@@ -216,5 +243,7 @@ export function useSpeechSynthesis() {
     englishVoices: rankVoices(voices),
     preferredUri,
     chooseVoice,
+    rate,
+    chooseRate,
   };
 }

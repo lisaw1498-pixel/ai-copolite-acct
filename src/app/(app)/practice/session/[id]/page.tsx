@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2, Lightbulb, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
-import { useSpeechSynthesis } from "@/lib/use-speech-synthesis";
+import { useSpeechSynthesis, RATE_CHOICES } from "@/lib/use-speech-synthesis";
 
 type Turn = {
   id: string;
@@ -55,6 +55,8 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
     englishVoices,
     preferredUri,
     chooseVoice,
+    rate,
+    chooseRate,
   } = useSpeechSynthesis();
   const [voiceOn, setVoiceOn] = useState(true);
   // Questions already read aloud, so re-fetching the transcript doesn't make
@@ -336,6 +338,23 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
                   ))}
                 </select>
               )}
+              <select
+                className="rounded-lg border border-surface-border bg-surface px-2 py-2 text-sm text-navy"
+                value={rate}
+                title="Speaking speed"
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  chooseRate(next);
+                  cancel();
+                  void speak("Let's start simple, tell me about yourself.", { rate: next });
+                }}
+              >
+                {RATE_CHOICES.map((r) => (
+                  <option key={r} value={r}>
+                    {r === 1 ? "Normal speed" : `${r}x speed`}
+                  </option>
+                ))}
+              </select>
             </>
           )}
           <Button variant="danger" onClick={endInterview} disabled={ending}>
