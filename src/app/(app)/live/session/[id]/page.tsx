@@ -20,6 +20,7 @@ import {
   SendHorizonal,
 } from "lucide-react";
 import clsx from "clsx";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type RememberCue = { label: string; value: string; verification?: string };
 type LiveAnswer = {
@@ -268,7 +269,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
   const isCompact = displayMode === "compact";
 
   return (
-    <div className={clsx("min-h-screen bg-slate-50 flex flex-col", isCompact && "max-w-md mx-auto")}>
+    <div className={clsx("min-h-screen bg-surface-muted flex flex-col", isCompact && "max-w-md mx-auto")}>
       <header className="flex items-center justify-between px-5 py-3 bg-midnight text-white">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span className={clsx("h-2 w-2 rounded-full bg-brand-success", listening && "pulse-dot")} />
@@ -279,6 +280,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
         </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="tabular-nums text-white/70">{mm}:{ss}</span>
+          <ThemeToggle compact />
           <button onClick={() => (listening ? stop() : start())} title="Pause/Resume" className="text-white/70 hover:text-white">
             {listening ? <Pause size={16} /> : <Play size={16} />}
           </button>
@@ -292,7 +294,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
       </header>
 
       {!isDiscreet && (
-        <div className="px-5 py-3 bg-white border-b border-surface-border">
+        <div className="px-5 py-3 bg-surface border-b border-surface-border">
           <div className="flex items-center gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/40">Interviewer asked</p>
             {isFollowUpAnswer && currentAnswer && (
@@ -305,13 +307,13 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
       {isDiscreet && (currentQuestion || interim) && (
-        <div className="px-5 py-2 bg-white border-b border-surface-border">
+        <div className="px-5 py-2 bg-surface border-b border-surface-border">
           <p className="text-xs text-navy/70 truncate">{currentQuestion || interim}</p>
         </div>
       )}
 
       <div className={clsx("flex-1 grid gap-0", !isCompact && !isQuickGlance && "md:grid-cols-[65%_35%]")}>
-        <div className={clsx("p-5 bg-white border-r border-surface-border", isDiscreet && "text-sm")}>
+        <div className={clsx("p-5 bg-surface border-r border-surface-border", isDiscreet && "text-sm")}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/40 mb-2">Say This</p>
           {/* Tokens paint as they arrive; the finalised answer replaces them. */}
           {(currentAnswer || streamingText) && (
@@ -405,11 +407,11 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {!isCompact && !isQuickGlance && (
-          <div className="p-5 bg-slate-50 overflow-y-auto">
+          <div className="p-5 bg-surface-muted overflow-y-auto">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/40 mb-3">Remember This</p>
 
             {(currentAnswer || earlyCues.length > 0) && availableStories.length > 0 && (
-              <div className="mb-3 rounded-lg border border-surface-border bg-white p-2.5">
+              <div className="mb-3 rounded-lg border border-surface-border bg-surface p-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-navy/40">Using</p>
                 <p className="mt-0.5 text-xs text-navy">
                   {availableStories.find(
@@ -442,7 +444,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
                             currentQuestion &&
                             submitQuestion(currentQuestion, isFollowUpAnswer, { preferredStoryId: st.id })
                           }
-                          className="block w-full rounded border border-surface-border px-2 py-1 text-left text-[11px] text-navy/70 hover:bg-slate-50"
+                          className="block w-full rounded border border-surface-border px-2 py-1 text-left text-[11px] text-navy/70 hover:bg-surface-muted"
                         >
                           {st.title}
                           {st.alreadyUsed && <span className="text-brand-warning"> · used</span>}
@@ -458,7 +460,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
 
             <div className="space-y-3">
               {(currentAnswer?.remember_this ?? earlyCues).map((cue, i) => (
-                <div key={i} className="rounded-lg bg-white border border-surface-border p-3">
+                <div key={i} className="rounded-lg bg-surface border border-surface-border p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-navy/40">{cue.label}</p>
                   <p className="mt-1 text-sm text-navy">{cue.value}</p>
                   {cue.verification && (
@@ -477,9 +479,9 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {isQuickGlance && (currentAnswer || earlyCues.length > 0) && (
-        <div className="p-5 bg-slate-50 grid grid-cols-2 gap-2">
+        <div className="p-5 bg-surface-muted grid grid-cols-2 gap-2">
           {(currentAnswer?.remember_this ?? earlyCues).slice(0, 6).map((cue, i) => (
-            <div key={i} className="rounded-lg bg-white border border-surface-border p-2.5 text-xs">
+            <div key={i} className="rounded-lg bg-surface border border-surface-border p-2.5 text-xs">
               <p className="font-semibold text-navy/40 uppercase">{cue.label}</p>
               <p className="text-navy mt-0.5">{cue.value}</p>
             </div>
@@ -490,7 +492,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
       {error && <p className="px-5 py-2 text-xs text-brand-danger bg-red-50">{error}</p>}
 
       {!isDiscreet && (
-        <div className="border-t border-surface-border bg-white px-5 py-3 flex items-center gap-2">
+        <div className="border-t border-surface-border bg-surface px-5 py-3 flex items-center gap-2">
           <button
             onClick={() => (listening ? stop() : start())}
             className={clsx("p-2 rounded-lg border", listening ? "border-brand-blue text-brand-blue" : "border-surface-border text-navy/40")}
@@ -524,7 +526,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
       )}
 
       {showTranscript && (
-        <div className="border-t border-surface-border bg-white max-h-52 overflow-y-auto px-5 py-3 space-y-2">
+        <div className="border-t border-surface-border bg-surface max-h-52 overflow-y-auto px-5 py-3 space-y-2">
           {transcript.map((t, i) => (
             <p key={i} className="text-xs">
               <span

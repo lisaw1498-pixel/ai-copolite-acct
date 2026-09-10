@@ -6,11 +6,11 @@ const base =
 
 const variants: Record<string, string> = {
   primary: "bg-brand-blue text-white hover:bg-brand-blue-dark px-4 py-2",
-  secondary: "border border-surface-border bg-white text-navy hover:bg-slate-50 px-4 py-2",
-  ghost: "text-navy/70 hover:bg-slate-100 px-3 py-1.5",
+  secondary: "border border-surface-border bg-surface text-navy hover:bg-surface-muted px-4 py-2",
+  ghost: "text-navy/70 hover:bg-surface-muted px-3 py-1.5",
   teal: "bg-brand-teal text-white hover:bg-teal-600 px-4 py-2",
   danger: "border border-red-200 text-brand-danger hover:bg-red-50 px-4 py-2",
-  subtle: "bg-slate-100 text-navy hover:bg-slate-200 px-3 py-1.5",
+  subtle: "bg-surface-muted text-navy hover:bg-slate-200 px-3 py-1.5",
 };
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {

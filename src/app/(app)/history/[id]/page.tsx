@@ -119,7 +119,7 @@ export default function SessionReportPage({ params }: { params: Promise<{ id: st
             <CardHeader title="Repeated themes" />
             <div className="px-5 py-4 flex flex-wrap gap-2">
               {data.report.repeatedThemesJson?.map((s, i) => (
-                <span key={i} className="text-xs bg-slate-100 text-navy/70 rounded-full px-2.5 py-1">{s}</span>
+                <span key={i} className="text-xs bg-surface-muted text-navy/70 rounded-full px-2.5 py-1">{s}</span>
               ))}
             </div>
           </Card>

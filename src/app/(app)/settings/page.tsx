@@ -51,8 +51,8 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-navy/50">
             AI features (resume parsing, job matching, question and answer generation, mock and live interviews) run
-            on Anthropic&apos;s Claude models. Add your key to <code className="bg-slate-100 px-1 rounded">.env.local</code>{" "}
-            as <code className="bg-slate-100 px-1 rounded">ANTHROPIC_API_KEY</code> and restart the server — for
+            on Anthropic&apos;s Claude models. Add your key to <code className="bg-surface-muted px-1 rounded">.env.local</code>{" "}
+            as <code className="bg-surface-muted px-1 rounded">ANTHROPIC_API_KEY</code> and restart the server — for
             security, keys are never exposed to the browser and can&apos;t be set from this page.
           </p>
         </div>

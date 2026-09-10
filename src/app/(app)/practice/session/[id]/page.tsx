@@ -282,7 +282,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
           <div key={t.id} className={`flex ${t.speaker === "ai_interviewer" ? "justify-start" : "justify-end"}`}>
             <div
               className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
-                t.speaker === "ai_interviewer" ? "bg-slate-100 text-navy" : "bg-brand-blue text-white"
+                t.speaker === "ai_interviewer" ? "bg-surface-muted text-navy" : "bg-brand-blue text-white"
               }`}
             >
               {t.cleanedTranscript || t.rawTranscript}
@@ -300,7 +300,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
       </Card>
 
       {coachOn && (suggesting || suggestion) && (
-        <Card className="mt-4 border-brand-blue/30 bg-blue-50/40 p-4">
+        <Card className="mt-4 border-brand-blue/30 bg-accent-soft/40 p-4">
           <div className="flex items-center gap-1.5">
             <Lightbulb size={13} className="text-brand-blue" />
             <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-blue">
@@ -323,7 +323,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
               {suggestionCues.map((cue, i) => (
                 <span
                   key={i}
-                  className="rounded-full border border-surface-border bg-white px-2 py-0.5 text-[11px] text-navy/70"
+                  className="rounded-full border border-surface-border bg-surface px-2 py-0.5 text-[11px] text-navy/70"
                 >
                   <span className="font-semibold text-navy/40">{cue.label}:</span> {cue.value}
                 </span>

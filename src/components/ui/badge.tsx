@@ -11,7 +11,7 @@ export function VerificationBadge({
   const meta = VERIFICATION_META[status as VerificationStatus] ?? {
     label: status,
     symbol: "•",
-    className: "bg-slate-50 text-slate-600 border-slate-200",
+    className: "bg-surface-muted text-slate-600 border-slate-200",
     description: "",
   };
   return (
@@ -39,8 +39,8 @@ export function Pill({
   className?: string;
 }) {
   const tones: Record<string, string> = {
-    neutral: "bg-slate-100 text-slate-600",
-    blue: "bg-blue-50 text-blue-700",
+    neutral: "bg-surface-muted text-slate-600",
+    blue: "bg-accent-soft text-blue-700",
     teal: "bg-teal-50 text-teal-700",
     amber: "bg-amber-50 text-amber-700",
     red: "bg-red-50 text-red-700",

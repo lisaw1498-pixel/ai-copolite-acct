@@ -125,7 +125,7 @@ export default function AnswerPrepPage({ params }: { params: Promise<{ jobId: st
             <CardHeader title="REMEMBER THIS" subtitle="Glance. Remember. Speak naturally." />
             <div className="grid grid-cols-2 gap-3 px-5 py-4">
               {current.remember_this.map((cue, i) => (
-                <div key={i} className="rounded-lg bg-slate-50 border border-surface-border p-3">
+                <div key={i} className="rounded-lg bg-surface-muted border border-surface-border p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/40">{cue.label}</p>
                   <p className="mt-1 text-sm text-navy">{cue.value}</p>
                   {cue.verification && <div className="mt-1"><VerificationBadge status={cue.verification} /></div>}

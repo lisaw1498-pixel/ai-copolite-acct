@@ -169,7 +169,7 @@ export default async function DashboardPage() {
               ))}
             </ul>
             {recommendation && (
-              <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-navy/60">
+              <p className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-[11px] text-navy/60">
                 Next: {recommendation}
               </p>
             )}

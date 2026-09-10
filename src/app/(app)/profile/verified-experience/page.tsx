@@ -91,7 +91,7 @@ export default function VerifiedExperiencePage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize border ${
-              filter === f ? "bg-brand-blue text-white border-brand-blue" : "border-surface-border text-navy/60 hover:bg-slate-50"
+              filter === f ? "bg-brand-blue text-white border-brand-blue" : "border-surface-border text-navy/60 hover:bg-surface-muted"
             }`}
           >
             {f}
@@ -122,7 +122,7 @@ export default function VerifiedExperiencePage() {
                 <td className="px-5 py-3"><VerificationBadge status={f.verificationStatus} /></td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-1">
-                    <button title="View Source" onClick={() => setViewSource(f)} className="p-1.5 rounded hover:bg-slate-100 text-navy/50">
+                    <button title="View Source" onClick={() => setViewSource(f)} className="p-1.5 rounded hover:bg-surface-muted text-navy/50">
                       <Eye size={14} />
                     </button>
                     <button
@@ -131,7 +131,7 @@ export default function VerifiedExperiencePage() {
                         setEditing(f);
                         setEditValue(f.factValue);
                       }}
-                      className="p-1.5 rounded hover:bg-slate-100 text-navy/50"
+                      className="p-1.5 rounded hover:bg-surface-muted text-navy/50"
                     >
                       <Pencil size={14} />
                     </button>
@@ -150,7 +150,7 @@ export default function VerifiedExperiencePage() {
                         <ArrowLeftRight size={14} />
                       </button>
                     )}
-                    <button title="Merge with another fact" className="p-1.5 rounded hover:bg-slate-100 text-navy/30 cursor-not-allowed" disabled>
+                    <button title="Merge with another fact" className="p-1.5 rounded hover:bg-surface-muted text-navy/30 cursor-not-allowed" disabled>
                       <GitMerge size={14} />
                     </button>
                   </div>

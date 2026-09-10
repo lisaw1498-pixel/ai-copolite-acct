@@ -323,7 +323,7 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
                       </div>
 
                       {open && (
-                        <div className="mt-3 rounded-lg border border-surface-border bg-slate-50 p-3">
+                        <div className="mt-3 rounded-lg border border-surface-border bg-surface-muted p-3">
                           {a?.loading && <p className="text-xs text-navy/50">Working...</p>}
                           {!a?.loading && (
                             <>
@@ -336,7 +336,7 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
                                 )}
                               </div>
                               <textarea
-                                className="input mt-1 min-h-[110px] bg-white"
+                                className="input mt-1 min-h-[110px] bg-surface"
                                 value={a?.text ?? ""}
                                 onChange={(e) =>
                                   setAnswers((prev) => ({

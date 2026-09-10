@@ -21,6 +21,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type NavItem = { label: string; href: string; icon: React.ElementType };
 type NavGroup = { label: string; icon: React.ElementType; items: NavItem[] } | NavItem;
@@ -82,7 +83,7 @@ export function Sidebar({ userName }: { userName: string }) {
   if (pathname.startsWith("/live/session/")) return null;
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-surface-border bg-white h-screen sticky top-0">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-surface-border bg-surface h-screen sticky top-0">
       <div className="flex items-center gap-2 px-5 py-5 border-b border-surface-border">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-blue text-white text-sm font-bold">
           AI
@@ -101,7 +102,7 @@ export function Sidebar({ userName }: { userName: string }) {
                 href={entry.href}
                 className={clsx(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium",
-                  active ? "bg-blue-50 text-brand-blue" : "text-navy/70 hover:bg-slate-50"
+                  active ? "bg-accent-soft text-brand-blue" : "text-navy/70 hover:bg-surface-muted"
                 )}
               >
                 <Icon size={16} />
@@ -127,8 +128,8 @@ export function Sidebar({ userName }: { userName: string }) {
                       className={clsx(
                         "flex items-center gap-2.5 rounded-lg px-3 py-1.5 ml-1 text-sm",
                         active
-                          ? "bg-blue-50 text-brand-blue font-medium"
-                          : "text-navy/60 hover:bg-slate-50"
+                          ? "bg-accent-soft text-brand-blue font-medium"
+                          : "text-navy/60 hover:bg-surface-muted"
                       )}
                     >
                       <Icon size={14} />
@@ -143,9 +144,10 @@ export function Sidebar({ userName }: { userName: string }) {
       </nav>
 
       <div className="border-t border-surface-border p-3">
+        <ThemeToggle />
         <div className="flex items-center justify-between rounded-lg px-2 py-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-navy shrink-0">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-raised text-xs font-semibold text-navy shrink-0">
               {userName.slice(0, 1).toUpperCase()}
             </span>
             <span className="truncate text-sm text-navy/80">{userName}</span>
