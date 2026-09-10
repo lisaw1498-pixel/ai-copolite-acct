@@ -64,7 +64,7 @@ ${job.jobDescriptionRaw?.slice(0, 2000) ?? ""}`
     conversationContext: [body.previousQuestion, body.previousAnswer].filter(Boolean).join(" "),
     jobContext,
   };
-  const allFacts = getUserFacts(user.id);
+  const allFacts = getUserFacts(user.id, session.jobId);
   const allStories = getUserStories(user.id);
   const facts = rankFacts(allFacts, retrievalQuery);
   const stories = rankStories(allStories, retrievalQuery);
@@ -113,6 +113,9 @@ ${job.jobDescriptionRaw?.slice(0, 2000) ?? ""}`
             responseLength: body.responseLength || "standard",
             isFollowUpHint: Boolean(body.isFollowUp),
             answerStyle: body.answerStyle,
+      interviewer: job
+        ? { name: job.interviewerName, role: job.interviewerRole, notes: job.interviewerNotes }
+        : null,
             preferredStoryId: body.preferredStoryId ?? null,
           },
           {

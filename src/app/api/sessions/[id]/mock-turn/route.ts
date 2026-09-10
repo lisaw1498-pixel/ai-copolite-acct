@@ -65,7 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let candidateSummary: string | null = null;
   if (useResume) {
     const verifiedOnly = config.verifiedOnly !== false;
-    const facts = getUserFacts(user.id).filter(
+    const facts = getUserFacts(user.id, session.jobId).filter(
       (f) => !verifiedOnly || f.verificationStatus.startsWith("verified_") || f.verificationStatus === "transferable"
     );
     const stories = getUserStories(user.id);

@@ -20,7 +20,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const facts = getUserFacts(user.id);
+    const facts = getUserFacts(user.id, id);
     const match = await matchJobToFacts(
       requirements.map((r) => ({ requirement: r.requirement, category: r.category || "", priority: r.priority || "" })),
       facts

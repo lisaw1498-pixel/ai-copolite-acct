@@ -62,7 +62,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const job = db.select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.userId, user.id))).get();
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const requirements = db.select().from(jobRequirements).where(eq(jobRequirements.jobId, id)).all();
-  const facts = getUserFacts(user.id);
+  const facts = getUserFacts(user.id, id);
 
   try {
     const generated = await generateInterviewQuestions({

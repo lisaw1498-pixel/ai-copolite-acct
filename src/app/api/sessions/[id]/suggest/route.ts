@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     : null;
 
   const retrievalQuery = { question, conversationContext: body.previousQuestion ?? "", jobContext };
-  const facts = rankFacts(getUserFacts(user.id), retrievalQuery);
+  const facts = rankFacts(getUserFacts(user.id, session.jobId), retrievalQuery);
   const stories = rankStories(getUserStories(user.id), retrievalQuery);
 
   const encoder = new TextEncoder();
@@ -56,6 +56,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             stories,
             jobContext,
             responseLength: body.responseLength || "standard",
+            interviewer: job
+              ? { name: job.interviewerName, role: job.interviewerRole, notes: job.interviewerNotes }
+              : null,
           },
           {
             onSayThisDelta: (text) => send("delta", { text }),

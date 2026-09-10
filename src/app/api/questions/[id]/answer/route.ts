@@ -115,7 +115,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
   const job = question.jobId ? db.select().from(jobs).where(eq(jobs.id, question.jobId)).get() : null;
-  const facts = getUserFacts(user.id);
+  const facts = getUserFacts(user.id, question.jobId);
   const stories = getUserStories(user.id);
 
   try {

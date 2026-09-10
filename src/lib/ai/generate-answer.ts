@@ -17,6 +17,8 @@ export type GenerateAnswerInput = {
   answerStyle?: "natural" | "executive" | "star";
   /** Set when the candidate hits "Switch Story" and picks a specific one. */
   preferredStoryId?: string | null;
+  /** Who is asking. Shapes emphasis and register only - never what is claimed. */
+  interviewer?: { name?: string | null; role?: string | null; notes?: string | null } | null;
 };
 
 function buildPrompt(input: GenerateAnswerInput): string {
@@ -56,6 +58,17 @@ function buildPrompt(input: GenerateAnswerInput): string {
       ? "Push the spoken register further than usual. Looser, more off-the-cuff, the way someone talks when they are relaxed and thinking out loud. More fragments, more connective tissue (\"I mean\", \"you know\", \"honestly\"), less structure. It should sound almost unrehearsed."
       : "";
 
+  const iv = input.interviewer;
+  const interviewerHint =
+    iv && (iv.role || iv.notes)
+      ? `WHO IS ASKING:
+${[iv.name && `Name: ${iv.name}`, iv.role && `Role: ${iv.role}`, iv.notes && `Background: ${iv.notes}`]
+  .filter(Boolean)
+  .join("\n")}
+
+Use this to choose WHICH of the candidate's verified experience to lead with, and how technical to pitch it. A clinical leader cares about workflow and adoption; a technical lead wants build and integration detail; an executive wants outcomes and risk. This changes emphasis and register ONLY. It is not evidence about the candidate, it never licenses a claim they cannot support, and you must never mention or allude to knowing anything about the interviewer.`
+      : "";
+
   const storyHint = input.preferredStoryId
     ? `The candidate has explicitly asked you to build this answer from career story [${input.preferredStoryId}]. Use that story unless it genuinely cannot answer the question.`
     : "";
@@ -87,6 +100,7 @@ STORIES ALREADY USED THIS SESSION: ${
 ${lengthHint}
 ${styleHint}
 ${storyHint}
+${interviewerHint}
 
 Return only the JSON object described in your system instructions.`;
 }

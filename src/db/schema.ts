@@ -158,6 +158,7 @@ export const technologies = sqliteTable("technologies", {
 /* ---------------------------------------------------------------------- */
 
 export const candidateFacts = sqliteTable("candidate_facts", {
+  jobId: text("job_id"),
   id: id(),
   userId: text("user_id").notNull(),
   factType: text("fact_type").notNull(),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { db } from "@/db/client";
-import { candidateFacts, preparedAnswers } from "@/db/schema";
+import { candidateFacts, interviewQuestions, preparedAnswers } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,9 +19,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   // Approved answers themselves become a source of verified experience for
   // future generations (VERIFIED — APPROVED ANSWER).
+  // Scope the fact to the job this answer was written for. An answer approved
+  // for a clinical role should not resurface as evidence in a technical
+  // interview for a different company.
+  const question = db
+    .select()
+    .from(interviewQuestions)
+    .where(eq(interviewQuestions.id, id))
+    .get();
+
   db.insert(candidateFacts)
     .values({
       userId: user.id,
+      jobId: question?.jobId ?? null,
       factType: "accomplishment",
       factKey: "approved_answer",
       factValue: answer.standardAnswer || answer.shortAnswer || "",

@@ -173,3 +173,35 @@ test("an invented number is still caught after normalisation", () => {
   assert.equal(flagged.length, 1);
   assert.match(flagged[0], /30%/);
 });
+
+// ---------------------------------------------------------------------------
+// Job scoping. Resume and story facts belong to the candidate and apply
+// everywhere; a fact created from an answer approved for one job must not
+// resurface as evidence at a different company.
+// ---------------------------------------------------------------------------
+
+/** Mirrors the filter in getUserFacts, without needing a database. */
+function visibleForJob<T extends { jobId?: string | null }>(facts: T[], jobId?: string | null): T[] {
+  return facts.filter((f) => !f.jobId || f.jobId === jobId);
+}
+
+test("resume facts are visible to every job", () => {
+  const facts = [{ id: "resume", jobId: null }, { id: "story", jobId: undefined }];
+  assert.equal(visibleForJob(facts, "job-a").length, 2);
+  assert.equal(visibleForJob(facts, "job-b").length, 2);
+});
+
+test("an answer approved for one job is not evidence at another", () => {
+  const facts = [
+    { id: "resume", jobId: null },
+    { id: "approved-for-a", jobId: "job-a" },
+  ];
+  assert.deepEqual(visibleForJob(facts, "job-a").map((f) => f.id), ["resume", "approved-for-a"]);
+  assert.deepEqual(visibleForJob(facts, "job-b").map((f) => f.id), ["resume"]);
+});
+
+test("job-scoped facts are hidden when there is no job in play", () => {
+  const facts = [{ id: "resume", jobId: null }, { id: "scoped", jobId: "job-a" }];
+  assert.deepEqual(visibleForJob(facts, null).map((f) => f.id), ["resume"]);
+  assert.deepEqual(visibleForJob(facts, undefined).map((f) => f.id), ["resume"]);
+});

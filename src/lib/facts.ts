@@ -12,8 +12,21 @@ import { eq } from "drizzle-orm";
 import { ExtractedResume } from "./ai/extract";
 import { FactForPrompt, StoryForPrompt } from "./ai/types";
 
-export function getUserFacts(userId: string): FactForPrompt[] {
-  const rows = db.select().from(candidateFacts).where(eq(candidateFacts.userId, userId)).all();
+/**
+ * Facts the copilot may use when answering for a given job.
+ *
+ * Resume, story and project facts have no job attached - they are the
+ * candidate's experience and apply to every interview. Facts created from an
+ * answer approved for a specific job stay with that job, so wording shaped for
+ * one company never resurfaces as evidence at another.
+ */
+export function getUserFacts(userId: string, jobId?: string | null): FactForPrompt[] {
+  const rows = db
+    .select()
+    .from(candidateFacts)
+    .where(eq(candidateFacts.userId, userId))
+    .all()
+    .filter((r) => !r.jobId || r.jobId === jobId);
   return rows.map((r) => ({
     id: r.id,
     factType: r.factType,

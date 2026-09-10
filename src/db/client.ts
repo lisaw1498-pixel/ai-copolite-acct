@@ -85,6 +85,10 @@ function connect(): DB {
   ensureColumn(sqlite, "jobs", "prep_notes", "text");
   ensureColumn(sqlite, "jobs", "interviewer_role", "text");
   ensureColumn(sqlite, "jobs", "interviewer_notes", "text");
+  // Facts created from an answer approved for one job stay scoped to that job.
+  // Left NULL for resume/story facts, which are the candidate's experience and
+  // apply everywhere.
+  ensureColumn(sqlite, "candidate_facts", "job_id", "text");
   ensureColumn(sqlite, "prepared_answers", "source", "text");
 
   const instance = drizzle(sqlite, { schema });
