@@ -119,7 +119,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     jobId: question.jobId,
     resumeId: resolveResumeId(user.id, job?.resumeId),
   });
-  const stories = getUserStories(user.id);
+  const stories = getUserStories(user.id, question.jobId);
 
   try {
     const lengths: ("quick" | "standard" | "detailed")[] = ["quick", "standard", "detailed"];

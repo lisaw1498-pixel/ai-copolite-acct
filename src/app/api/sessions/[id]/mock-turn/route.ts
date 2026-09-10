@@ -71,7 +71,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }).filter(
       (f) => !verifiedOnly || f.verificationStatus.startsWith("verified_") || f.verificationStatus === "transferable"
     );
-    const stories = getUserStories(user.id);
+    const stories = getUserStories(user.id, session.jobId);
     const factLines = facts
       .slice(0, 70)
       .map((f) => `- (${f.factType}) ${f.factValue}`)

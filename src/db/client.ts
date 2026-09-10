@@ -37,6 +37,16 @@ function ensureColumn(sqlite: Database.Database, table: string, column: string, 
   }
 }
 
+
+/** Creates a table if it is missing. The bootstrap above only runs on a brand
+ *  new database, so an existing local db would never gain a new table. */
+function ensureTable(sqlite: Database.Database, name: string, ddl: string) {
+  const exists = sqlite
+    .prepare("select name from sqlite_master where type = 'table' and name = ?")
+    .get(name);
+  if (!exists) sqlite.exec(ddl);
+}
+
 function connect(): DB {
   if (cached) return cached;
   if (global.__drizzle__) {
@@ -89,6 +99,21 @@ function connect(): DB {
   // Left NULL for resume/story facts, which are the candidate's experience and
   // apply everywhere.
   ensureColumn(sqlite, "candidate_facts", "job_id", "text");
+
+  // Which career stories the candidate has chosen to prepare for a given
+  // interview. Many-to-many on purpose: a strong story is reusable across
+  // applications, so pinning each one to a single job would force duplicates.
+  ensureTable(
+    sqlite,
+    "job_stories",
+    `CREATE TABLE job_stories (
+      id text PRIMARY KEY NOT NULL,
+      job_id text NOT NULL,
+      career_story_id text NOT NULL,
+      created_at integer,
+      UNIQUE(job_id, career_story_id)
+    )`
+  );
   ensureColumn(sqlite, "prepared_answers", "source", "text");
 
   const instance = drizzle(sqlite, { schema });

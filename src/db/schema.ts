@@ -341,6 +341,13 @@ export const answerFactLinks = sqliteTable("answer_fact_links", {
   createdAt: now(),
 });
 
+export const jobStories = sqliteTable("job_stories", {
+  id: id(),
+  jobId: text("job_id").notNull(),
+  careerStoryId: text("career_story_id").notNull(),
+  createdAt: now(),
+});
+
 export const storyUsage = sqliteTable("story_usage", {
   id: id(),
   sessionId: text("session_id").notNull(),

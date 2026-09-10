@@ -68,7 +68,7 @@ ${job.jobDescriptionRaw?.slice(0, 2000) ?? ""}`
     jobId: session.jobId,
     resumeId: resolveResumeId(user.id, job?.resumeId),
   });
-  const allStories = getUserStories(user.id);
+  const allStories = getUserStories(user.id, session.jobId);
   const facts = rankFacts(allFacts, retrievalQuery);
   const stories = rankStories(allStories, retrievalQuery);
 

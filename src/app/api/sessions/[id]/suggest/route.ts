@@ -43,7 +43,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     jobId: session.jobId,
     resumeId: resolveResumeId(user.id, job?.resumeId),
   }), retrievalQuery);
-  const stories = rankStories(getUserStories(user.id), retrievalQuery);
+  const stories = rankStories(getUserStories(user.id, session.jobId), retrievalQuery);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

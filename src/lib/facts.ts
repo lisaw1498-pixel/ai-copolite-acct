@@ -3,6 +3,7 @@ import {
   candidateFacts,
   candidateProfiles,
   careerStories,
+  jobStories,
   employers,
   resumes,
   skills,
@@ -74,9 +75,26 @@ export function getUserFacts(
   }));
 }
 
-export function getUserStories(userId: string): StoryForPrompt[] {
+/**
+ * Career stories available for an interview.
+ *
+ * When the candidate has chosen stories for a specific job, only those are
+ * offered - that choice is deliberate preparation, and ignoring it would let
+ * the copilot reach for an example they had decided not to use here. With no
+ * choice made, the whole bank is available.
+ */
+export function getUserStories(userId: string, jobId?: string | null): StoryForPrompt[] {
   const rows = db.select().from(careerStories).where(eq(careerStories.userId, userId)).all();
-  return rows.map((r) => ({
+
+  let selected = rows;
+  if (jobId) {
+    const linked = new Set(
+      db.select().from(jobStories).where(eq(jobStories.jobId, jobId)).all().map((r) => r.careerStoryId)
+    );
+    if (linked.size > 0) selected = rows.filter((r) => linked.has(r.id));
+  }
+
+  return selected.map((r) => ({
     id: r.id,
     title: r.title,
     category: r.category,

@@ -265,3 +265,29 @@ test("with no resume selected, every resume fact is still available", () => {
   ];
   assert.equal(visibleFor(facts, {}).length, 2);
 });
+
+// ---------------------------------------------------------------------------
+// Story selection per interview.
+// ---------------------------------------------------------------------------
+
+/** Mirrors the selection logic in getUserStories. */
+function storiesFor<T extends { id: string }>(all: T[], linkedIds: string[]): T[] {
+  if (linkedIds.length === 0) return all;
+  const set = new Set(linkedIds);
+  return all.filter((s) => set.has(s.id));
+}
+
+test("choosing stories for an interview limits what the copilot may use", () => {
+  const all = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  assert.deepEqual(storiesFor(all, ["a", "c"]).map((s) => s.id), ["a", "c"]);
+});
+
+test("choosing none leaves the whole bank available", () => {
+  const all = [{ id: "a" }, { id: "b" }];
+  assert.equal(storiesFor(all, []).length, 2);
+});
+
+test("a story deliberately left out never surfaces", () => {
+  const all = [{ id: "keep" }, { id: "excluded" }];
+  assert.equal(storiesFor(all, ["keep"]).some((s) => s.id === "excluded"), false);
+});

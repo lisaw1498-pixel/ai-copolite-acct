@@ -18,6 +18,9 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  BookOpen,
+  X,
+  FileText,
 } from "lucide-react";
 
 type Question = {
@@ -41,11 +44,22 @@ type Job = {
   interviewerNotes: string | null;
   interviewStage: string | null;
   matchScore: number | null;
+  resumeId: string | null;
   companyResearch: string | null;
   prepNotes: string | null;
 };
 
 type AnswerState = { text: string; source: string | null; approved: boolean; loading: boolean };
+type Story = {
+  id: string;
+  title: string;
+  category: string | null;
+  situation: string | null;
+  metrics: string | null;
+  timesUsed: number | null;
+  linked: boolean;
+};
+type Resume = { id: string; name: string; isDefault: boolean | null; status: string };
 
 /**
  * Everything for one interview in one place: the details, what you have found
@@ -85,16 +99,28 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
   const [notes, setNotes] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
+  const [stories, setStories] = useState<Story[]>([]);
+  const [storiesOpen, setStoriesOpen] = useState(true);
+  const [showStoryPicker, setShowStoryPicker] = useState(false);
+  const [newStory, setNewStory] = useState({ title: "", situation: "", action: "", result: "", metrics: "" });
+  const [writingStory, setWritingStory] = useState(false);
+
+  const [resumes, setResumes] = useState<Resume[]>([]);
+
   const [newQuestion, setNewQuestion] = useState("");
   const [adding, setAdding] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [starting, setStarting] = useState<"mock" | "live" | null>(null);
 
   const load = useCallback(async () => {
-    const [j, q] = await Promise.all([
+    const [j, q, st, rs] = await Promise.all([
       fetch(`/api/jobs/${id}`).then((r) => r.json()),
       fetch(`/api/jobs/${id}/questions`).then((r) => r.json()),
+      fetch(`/api/jobs/${id}/stories`).then((r) => r.json()),
+      fetch("/api/resumes").then((r) => r.json()),
     ]);
+    setStories(st.stories || []);
+    setResumes((rs.resumes || []).filter((x: Resume) => x.status === "analyzed"));
     if (j.job) {
       setJob(j.job);
       setResearch(j.job.companyResearch || "");
@@ -131,6 +157,41 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
       body: JSON.stringify(details),
     });
     setDetailsSaved(new Date().toLocaleTimeString());
+    await load();
+  }
+
+  async function setResume(resumeId: string) {
+    await fetch(`/api/jobs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resumeId: resumeId || null }),
+    });
+    await load();
+  }
+
+  async function linkStory(careerStoryId: string) {
+    await fetch(`/api/jobs/${id}/stories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ careerStoryId }),
+    });
+    await load();
+  }
+
+  async function unlinkStory(careerStoryId: string) {
+    await fetch(`/api/jobs/${id}/stories?careerStoryId=${careerStoryId}`, { method: "DELETE" });
+    await load();
+  }
+
+  async function createStory() {
+    if (!newStory.title.trim()) return;
+    await fetch(`/api/jobs/${id}/stories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newStory),
+    });
+    setNewStory({ title: "", situation: "", action: "", result: "", metrics: "" });
+    setWritingStory(false);
     await load();
   }
 
@@ -317,6 +378,31 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
             />
           </div>
 
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium text-navy/70">
+              <FileText size={12} /> Resume for this interview
+            </label>
+            <p className="text-xs text-navy/45 mt-0.5">
+              Answers are built from this resume only. Tailored versions describe the same career
+              differently, and mixing them produces claims you cannot reconcile.
+            </p>
+            <select
+              className="input mt-1.5"
+              value={job.resumeId || ""}
+              onChange={(e) => setResume(e.target.value)}
+            >
+              <option value="">
+                Use my default resume
+                {resumes.find((r) => r.isDefault) ? ` (${resumes.find((r) => r.isDefault)!.name})` : ""}
+              </option>
+              {resumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center justify-between border-t border-surface-border pt-3">
             <span className="text-xs text-navy/45">
               Match score{" "}
@@ -366,6 +452,103 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
             />
           </div>
           {savedAt && <p className="text-xs text-brand-success">Saved at {savedAt}</p>}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Stories for this interview"
+          action={
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowStoryPicker((v) => !v)}>
+                <BookOpen size={14} /> Pick from bank
+              </Button>
+              <Button variant="secondary" onClick={() => setWritingStory((v) => !v)}>
+                <Plus size={14} /> Write one
+              </Button>
+            </div>
+          }
+        />
+
+        <div className="px-5 py-4 border-b border-surface-border">
+          <p className="text-xs text-navy/45">
+            Choose the examples you want to use for this interview. Once you pick any, the mock
+            interviewer and the live copilot draw only on these — so a story you decided not to use
+            here will not surface. Pick none and your whole bank stays available.
+          </p>
+        </div>
+
+        {writingStory && (
+          <div className="px-5 py-4 border-b border-surface-border space-y-2">
+            <input className="input" placeholder="Story title, e.g. Recovering a stalled go-live"
+              value={newStory.title} onChange={(e) => setNewStory({ ...newStory, title: e.target.value })} />
+            <textarea className="input min-h-[60px]" placeholder="Situation — what was happening?"
+              value={newStory.situation} onChange={(e) => setNewStory({ ...newStory, situation: e.target.value })} />
+            <textarea className="input min-h-[60px]" placeholder="Action — what did you actually do?"
+              value={newStory.action} onChange={(e) => setNewStory({ ...newStory, action: e.target.value })} />
+            <textarea className="input min-h-[60px]" placeholder="Result — what happened?"
+              value={newStory.result} onChange={(e) => setNewStory({ ...newStory, result: e.target.value })} />
+            <input className="input" placeholder="Metric, if you have one you can prove"
+              value={newStory.metrics} onChange={(e) => setNewStory({ ...newStory, metrics: e.target.value })} />
+            <div className="flex gap-2">
+              <Button onClick={createStory} disabled={!newStory.title.trim()}>Save &amp; use here</Button>
+              <Button variant="secondary" onClick={() => setWritingStory(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {showStoryPicker && (
+          <div className="px-5 py-4 border-b border-surface-border">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/40">
+              Your story bank
+            </p>
+            <div className="mt-2 space-y-1 max-h-72 overflow-y-auto scrollbar-thin">
+              {stories.filter((st) => !st.linked).map((st) => (
+                <button
+                  key={st.id}
+                  onClick={() => linkStory(st.id)}
+                  className="block w-full rounded-lg border border-surface-border px-3 py-2 text-left hover:bg-surface-muted"
+                >
+                  <p className="text-sm text-navy">{st.title}</p>
+                  <p className="text-[11px] text-navy/40">
+                    {st.category}
+                    {st.metrics ? ` · ${st.metrics}` : ""}
+                  </p>
+                </button>
+              ))}
+              {stories.filter((st) => !st.linked).length === 0 && (
+                <p className="text-sm text-navy/40">Every story is already attached to this interview.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="divide-y divide-surface-border">
+          {stories.filter((st) => st.linked).map((st) => (
+            <div key={st.id} className="flex items-start justify-between gap-3 px-5 py-3">
+              <div className="min-w-0">
+                <p className="text-sm text-navy">{st.title}</p>
+                {st.situation && <p className="mt-0.5 text-xs text-navy/60 line-clamp-2">{st.situation}</p>}
+                <p className="mt-0.5 text-[11px] text-navy/40">
+                  {st.category}
+                  {st.metrics ? ` · ${st.metrics}` : ""}
+                  {st.timesUsed ? ` · used ${st.timesUsed}x` : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => unlinkStory(st.id)}
+                title="Remove from this interview (keeps it in your bank)"
+                className="shrink-0 text-navy/40 hover:text-brand-danger"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ))}
+          {stories.filter((st) => st.linked).length === 0 && (
+            <p className="px-5 py-6 text-sm text-navy/40">
+              No stories chosen. Your full bank of {stories.length} is available to this interview.
+            </p>
+          )}
         </div>
       </Card>
 
