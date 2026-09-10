@@ -221,6 +221,8 @@ export const jobs = sqliteTable("jobs", {
   interviewDate: text("interview_date"),
   interviewTime: text("interview_time"),
   interviewerName: text("interviewer_name"),
+  interviewerRole: text("interviewer_role"),
+  interviewerNotes: text("interviewer_notes"),
   companyResearch: text("company_research"),
   prepNotes: text("prep_notes"),
   matchScore: integer("match_score"),

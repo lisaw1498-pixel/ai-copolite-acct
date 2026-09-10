@@ -83,6 +83,8 @@ function connect(): DB {
   // belong here rather than in a parallel entity.
   ensureColumn(sqlite, "jobs", "company_research", "text");
   ensureColumn(sqlite, "jobs", "prep_notes", "text");
+  ensureColumn(sqlite, "jobs", "interviewer_role", "text");
+  ensureColumn(sqlite, "jobs", "interviewer_notes", "text");
   ensureColumn(sqlite, "prepared_answers", "source", "text");
 
   const instance = drizzle(sqlite, { schema });

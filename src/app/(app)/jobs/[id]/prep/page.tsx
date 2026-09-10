@@ -37,6 +37,8 @@ type Job = {
   interviewDate: string | null;
   interviewTime: string | null;
   interviewerName: string | null;
+  interviewerRole: string | null;
+  interviewerNotes: string | null;
   interviewStage: string | null;
   matchScore: number | null;
   companyResearch: string | null;
@@ -70,6 +72,15 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
     predicted: false,
   });
 
+  const [details, setDetails] = useState({
+    interviewerName: "",
+    interviewerRole: "",
+    interviewerNotes: "",
+    interviewStage: "",
+    interviewDate: "",
+    interviewTime: "",
+  });
+  const [detailsSaved, setDetailsSaved] = useState<string | null>(null);
   const [research, setResearch] = useState("");
   const [notes, setNotes] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -88,6 +99,14 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
       setJob(j.job);
       setResearch(j.job.companyResearch || "");
       setNotes(j.job.prepNotes || "");
+      setDetails({
+        interviewerName: j.job.interviewerName || "",
+        interviewerRole: j.job.interviewerRole || "",
+        interviewerNotes: j.job.interviewerNotes || "",
+        interviewStage: j.job.interviewStage || "",
+        interviewDate: j.job.interviewDate || "",
+        interviewTime: j.job.interviewTime || "",
+      });
     }
     setQuestions(q.questions || []);
   }, [id]);
@@ -103,6 +122,16 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
       body: JSON.stringify({ companyResearch: research, prepNotes: notes }),
     });
     setSavedAt(new Date().toLocaleTimeString());
+  }
+
+  async function saveDetails() {
+    await fetch(`/api/jobs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(details),
+    });
+    setDetailsSaved(new Date().toLocaleTimeString());
+    await load();
   }
 
   async function addQuestion() {
@@ -203,23 +232,100 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
       </div>
 
       <Card>
-        <CardHeader title="Interview details" />
-        <div className="px-5 py-4 grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-navy/40 text-xs">Interviewer</p>
-            <p className="text-navy">{job.interviewerName || "Not set"}</p>
+        <CardHeader
+          title="Interview details"
+          action={
+            <Button variant="secondary" onClick={saveDetails}>
+              <Save size={14} /> Save
+            </Button>
+          }
+        />
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-navy/70">Interviewer</label>
+              <input
+                className="input mt-1"
+                value={details.interviewerName}
+                onChange={(e) => setDetails((d) => ({ ...d, interviewerName: e.target.value }))}
+                placeholder="Dana Whitfield"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-navy/70">Their role</label>
+              <input
+                className="input mt-1"
+                value={details.interviewerRole}
+                onChange={(e) => setDetails((d) => ({ ...d, interviewerRole: e.target.value }))}
+                placeholder="Director, Ambulatory Applications"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-navy/70">Stage</label>
+              <select
+                className="input mt-1"
+                value={details.interviewStage}
+                onChange={(e) => setDetails((d) => ({ ...d, interviewStage: e.target.value }))}
+              >
+                <option value="">Not set</option>
+                {[
+                  ["recruiter_screen", "Recruiter Screen"],
+                  ["hiring_manager", "Hiring Manager"],
+                  ["technical", "Technical Interview"],
+                  ["panel", "Panel"],
+                  ["final", "Final Interview"],
+                ].map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-medium text-navy/70">Date</label>
+                <input
+                  type="date"
+                  className="input mt-1"
+                  value={details.interviewDate}
+                  onChange={(e) => setDetails((d) => ({ ...d, interviewDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-navy/70">Time</label>
+                <input
+                  type="time"
+                  className="input mt-1"
+                  value={details.interviewTime}
+                  onChange={(e) => setDetails((d) => ({ ...d, interviewTime: e.target.value }))}
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <p className="text-navy/40 text-xs">Stage</p>
-            <p className="text-navy">{job.interviewStage || "Not set"}</p>
+            <label className="text-xs font-medium text-navy/70">About your interviewer</label>
+            <p className="text-xs text-navy/45 mt-0.5">
+              Their background, how long they have been there, what they seem to care about. Knowing
+              who is across the table changes which of your examples land best.
+            </p>
+            <textarea
+              className="input mt-1.5 min-h-[90px]"
+              value={details.interviewerNotes}
+              onChange={(e) => setDetails((d) => ({ ...d, interviewerNotes: e.target.value }))}
+              placeholder="Clinical background, came from Epic. Ran their last two rollouts herself, so she will push on hands-on build detail..."
+            />
           </div>
-          <div>
-            <p className="text-navy/40 text-xs">Date &amp; time</p>
-            <p className="text-navy">{[job.interviewDate, job.interviewTime].filter(Boolean).join(" · ") || "Not set"}</p>
-          </div>
-          <div>
-            <p className="text-navy/40 text-xs">Match score</p>
-            <p className="text-navy">{job.matchScore != null ? `${job.matchScore}%` : "Not analyzed yet"}</p>
+
+          <div className="flex items-center justify-between border-t border-surface-border pt-3">
+            <span className="text-xs text-navy/45">
+              Match score{" "}
+              <span className="text-navy font-medium">
+                {job.matchScore != null ? `${job.matchScore}%` : "not analyzed yet"}
+              </span>{" "}
+              — calculated from the posting, not editable here.
+            </span>
+            {detailsSaved && <span className="text-xs text-brand-success">Saved at {detailsSaved}</span>}
           </div>
         </div>
       </Card>

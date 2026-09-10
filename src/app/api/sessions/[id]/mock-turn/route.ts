@@ -149,6 +149,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       jobDescription: useJd ? job?.jobDescriptionRaw ?? null : null,
       requirements,
       candidateSummary,
+      interviewer: job
+        ? { name: job.interviewerName, role: job.interviewerRole, notes: job.interviewerNotes }
+        : undefined,
       likelyQuestions,
       transcript,
     });

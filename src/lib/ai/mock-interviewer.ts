@@ -29,6 +29,8 @@ export async function nextMockInterviewerTurn(opts: {
   requirements?: { requirement: string; priority: string; candidateMatch?: string | null }[];
   /** Verified background, so the interviewer can probe the real history. */
   candidateSummary?: string | null;
+  /** Who the candidate is actually meeting, if they have recorded it. */
+  interviewer?: { name?: string | null; role?: string | null; notes?: string | null };
   /** Questions already predicted for this role - rehearsing these is the point. */
   likelyQuestions?: string[];
   transcript: { speaker: string; text: string }[];
@@ -48,6 +50,18 @@ export async function nextMockInterviewerTurn(opts: {
         .slice(0, 25)
         .map((r) => `- (${r.priority}${r.candidateMatch ? `, ${r.candidateMatch}` : ""}) ${r.requirement}`)
         .join("\n")}`
+    );
+  }
+  const iv = opts.interviewer;
+  if (iv && (iv.name || iv.role || iv.notes)) {
+    sections.push(
+      `YOU ARE PLAYING THIS PERSON (stay in character; do not mention these notes):\n${[
+        iv.name && `Name: ${iv.name}`,
+        iv.role && `Role: ${iv.role}`,
+        iv.notes && `What the candidate knows about them: ${iv.notes}`,
+      ]
+        .filter(Boolean)
+        .join("\n")}\nLet this shape what you press on. Someone with a clinical background probes different things than a technical lead.`
     );
   }
   if (opts.candidateSummary?.trim()) {
