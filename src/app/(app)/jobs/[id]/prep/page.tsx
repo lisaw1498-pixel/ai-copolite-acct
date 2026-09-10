@@ -16,6 +16,8 @@ import {
   Pencil,
   CheckCircle2,
   Building2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 type Question = {
@@ -61,6 +63,12 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+  // Your own questions start open because there are usually a handful. The
+  // predicted list runs to 25+ and would otherwise bury everything below it.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    mine: true,
+    predicted: false,
+  });
 
   const [research, setResearch] = useState("");
   const [notes, setNotes] = useState("");
@@ -284,90 +292,110 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        {[
-          ["Your questions", mine],
-          ["Predicted for this role", predicted],
-        ].map(([label, list]) => {
-          const items = list as Question[];
+        {([
+          ["mine", "Your questions", mine],
+          ["predicted", "Predicted for this role", predicted],
+        ] as const).map(([key, label, items]) => {
           if (items.length === 0) return null;
+          const expanded = openGroups[key];
           return (
-            <div key={label as string}>
-              <p className="px-5 pt-4 text-[11px] font-semibold uppercase tracking-wide text-navy/40">
-                {label as string} ({items.length})
-              </p>
-              <div className="divide-y divide-surface-border">
-                {items.map((q) => {
-                  const a = answers[q.id];
-                  const open = openQuestion === q.id;
-                  return (
-                    <div key={q.id} className="px-5 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <button onClick={() => openAnswer(q.id)} className="text-left flex-1">
-                          <p className="text-sm text-navy">{q.question}</p>
-                          <p className="mt-0.5 text-[11px] text-navy/40">
-                            {q.category}
-                            {q.difficulty ? ` · ${q.difficulty}` : ""}
-                            {q.generated === false ? " · yours" : ""}
-                          </p>
-                        </button>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="secondary" onClick={() => openAnswer(q.id)}>
-                            <Pencil size={13} /> {open ? "Close" : "Answer"}
-                          </Button>
-                          {q.generated === false && (
-                            <Button variant="secondary" onClick={() => removeQuestion(q.id)} title="Delete">
-                              <Trash2 size={13} />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+            <div key={key}>
+              <button
+                onClick={() => setOpenGroups((g) => ({ ...g, [key]: !g[key] }))}
+                className="flex w-full items-center gap-1.5 px-5 py-3 text-left hover:bg-surface-muted"
+                aria-expanded={expanded}
+              >
+                {expanded ? (
+                  <ChevronDown size={14} className="text-navy/40" />
+                ) : (
+                  <ChevronRight size={14} className="text-navy/40" />
+                )}
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-navy/40">
+                  {label} ({items.length})
+                </span>
+                {!expanded && (
+                  <span className="ml-1 text-[11px] text-navy/30">click to show</span>
+                )}
+              </button>
 
-                      {open && (
-                        <div className="mt-3 rounded-lg border border-surface-border bg-surface-muted p-3">
-                          {a?.loading && <p className="text-xs text-navy/50">Working...</p>}
-                          {!a?.loading && (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <label className="text-xs font-medium text-navy/70">Your answer</label>
-                                {a?.source === "user" && a?.approved && (
-                                  <span className="inline-flex items-center gap-1 text-[11px] text-brand-success">
-                                    <CheckCircle2 size={11} /> Saved in your words
-                                  </span>
-                                )}
-                              </div>
-                              <textarea
-                                className="input mt-1 min-h-[110px] bg-surface"
-                                value={a?.text ?? ""}
-                                onChange={(e) =>
-                                  setAnswers((prev) => ({
-                                    ...prev,
-                                    [q.id]: { ...(prev[q.id] ?? { source: null, approved: false, loading: false }), text: e.target.value },
-                                  }))
-                                }
-                                placeholder="Write how you would actually say it..."
-                              />
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <Button onClick={() => saveMyAnswer(q.id)} disabled={!a?.text?.trim()}>
-                                  <Save size={13} /> Save my answer
-                                </Button>
-                                <Link href={`/prepare/${id}/answers/${q.id}`}>
-                                  <Button variant="secondary">
-                                    <Sparkles size={13} /> Build one from my experience
-                                  </Button>
-                                </Link>
-                              </div>
-                              <p className="mt-2 text-[11px] text-navy/40">
-                                Your own words are the strongest grounding there is. A saved answer is
-                                used as verified experience in later interviews.
-                              </p>
-                            </>
-                          )}
+              {expanded && (
+                <div className="divide-y divide-surface-border border-t border-surface-border">
+                  {items.map((q) => {
+                    const a = answers[q.id];
+                    const open = openQuestion === q.id;
+                    return (
+                      <div key={q.id} className="px-5 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <button onClick={() => openAnswer(q.id)} className="text-left flex-1">
+                            <p className="text-sm text-navy">{q.question}</p>
+                            <p className="mt-0.5 text-[11px] text-navy/40">
+                              {q.category}
+                              {q.difficulty ? ` · ${q.difficulty}` : ""}
+                              {q.generated === false ? " · yours" : ""}
+                            </p>
+                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="secondary" onClick={() => openAnswer(q.id)}>
+                              <Pencil size={13} /> {open ? "Close" : "Answer"}
+                            </Button>
+                            {q.generated === false && (
+                              <Button variant="secondary" onClick={() => removeQuestion(q.id)} title="Delete">
+                                <Trash2 size={13} />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+
+                        {open && (
+                          <div className="mt-3 rounded-lg border border-surface-border bg-surface-muted p-3">
+                            {a?.loading && <p className="text-xs text-navy/50">Working...</p>}
+                            {!a?.loading && (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs font-medium text-navy/70">Your answer</label>
+                                  {a?.source === "user" && a?.approved && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-brand-success">
+                                      <CheckCircle2 size={11} /> Saved in your words
+                                    </span>
+                                  )}
+                                </div>
+                                <textarea
+                                  className="input mt-1 min-h-[110px]"
+                                  value={a?.text ?? ""}
+                                  onChange={(e) =>
+                                    setAnswers((prev) => ({
+                                      ...prev,
+                                      [q.id]: {
+                                        ...(prev[q.id] ?? { source: null, approved: false, loading: false }),
+                                        text: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Write how you would actually say it..."
+                                />
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <Button onClick={() => saveMyAnswer(q.id)} disabled={!a?.text?.trim()}>
+                                    <Save size={13} /> Save my answer
+                                  </Button>
+                                  <Link href={`/prepare/${id}/answers/${q.id}`}>
+                                    <Button variant="secondary">
+                                      <Sparkles size={13} /> Build one from my experience
+                                    </Button>
+                                  </Link>
+                                </div>
+                                <p className="mt-2 text-[11px] text-navy/40">
+                                  Your own words are the strongest grounding there is. A saved answer is
+                                  used as verified experience in later interviews.
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}

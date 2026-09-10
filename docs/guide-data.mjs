@@ -35,6 +35,10 @@ export const SECTIONS = [
     body: "A grounded answer for any question, at three lengths - roughly 15, 30 and 60 seconds. Underneath, the cue cards you would actually glance at, and a note of how many verified facts the answer rests on. Approve one and it is saved.",
     tips: ["Saved answers load instantly - it will not regenerate unless you ask.", "Regenerating replaces a saved answer and clears its approval."] },
 
+  { img: "09b-interview-hub.png", title: "Interview Hub", sub: "Jobs - Interview Hub",
+    body: "Everything for one interview in one place. The details, what you have found out about the company, the questions you expect, your answers to them, and the buttons to practise or go live. Questions you add yourself are kept separate from the predicted ones, because a recruiter telling you what is coming is better evidence than a prediction. Both lists collapse, so a long set of predicted questions does not bury the rest of the page.",
+    tips: ["Add a question button: anything the recruiter mentioned, or that you know this company asks.", "Write your own answer to any question - your own words are the strongest grounding there is, and a saved answer counts as verified experience in later interviews.", "Company research and prep notes are yours; nothing is sent anywhere until you use it.", "Practice This Interview and Start Live Interview both launch already tied to this job."] },
+
   { img: "10-mock-setup.png", title: "Mock Interview Setup", sub: "Practice - Mock Interview",
     body: "Choose the job, the interview type, the difficulty, and how long you want to go. Leave Use Job Description and Use My Resume on - they are what make the interviewer ask about your actual background rather than generic questions.",
     tips: ["Verified Experience Only keeps the interviewer to evidence you can defend.", "Challenging and Aggressive Follow-Up press much harder on gaps."] },
@@ -58,4 +62,7 @@ export const SECTIONS = [
   { img: "15-interview-history.png", title: "Interview History", sub: "History",
     body: "Every practice and live session, with scores and outcomes, so you can see whether you are improving. You can delete any session and its transcript.",
     tips: [] },
+  { img: "16-dark-mode.png", title: "Light & Dark Mode", sub: "Anywhere - bottom of the sidebar",
+    body: "Switch between the light and dark theme from the bottom of the sidebar, or from the top-right of the live interview header so you can change it mid-interview. Your choice is remembered on this machine and saved to your account, so it follows you to another computer.",
+    tips: ["Dark mode is worth using for live interviews - during a video call a bright white panel lights up your face.", "The theme applies before the page draws, so there is no white flash when you load the app in a dark room."] },
 ];

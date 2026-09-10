@@ -21,6 +21,7 @@ const SHOTS = [
   ["07-job-analysis", `/jobs/${JOB}`, 4000],
   ["08-question-library", "/prepare/questions", 4000],
   ["09-answer-preparation", `/prepare/${JOB}/answers/${QUESTION}`, 6000],
+  ["09b-interview-hub", `/jobs/${JOB}/prep`, 4000],
   ["10-mock-setup", "/practice", 3000],
   ["11-mock-session", `/practice/session/${MOCK}`, 20000],
   ["12-live-launch", "/live", 4000],
@@ -45,6 +46,12 @@ await page.fill('input[type=email]', "test@example.com");
 await page.fill('input[type=password]', "testpassword123");
 await page.getByRole("button", { name: /continue with email/i }).click();
 await page.waitForURL(/dashboard|onboarding/, { timeout: 45000 });
+// Screenshots are for a printed guide, so force light mode regardless of what
+// the account's saved preference happens to be.
+await page.evaluate(() => {
+  try { localStorage.setItem("theme", "light"); } catch {}
+  document.documentElement.dataset.theme = "light";
+});
 await page.waitForTimeout(2000);
 console.log("signed in ->", page.url());
 
