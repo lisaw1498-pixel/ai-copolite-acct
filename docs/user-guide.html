@@ -1,0 +1,319 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>AI Interview Copilot - User Guide</title>
+<style>
+  @page { size: Letter; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Inter, system-ui, sans-serif; color: #111827; margin: 0; font-size: 11pt; line-height: 1.55; }
+  h1,h2,h3 { color: #0B1220; margin: 0; }
+
+  .cover { height: 232mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .logo { display:inline-flex; align-items:center; gap:10px; margin-bottom: 26px; }
+  .logo .mark { width: 40px; height: 40px; border-radius: 10px; background: #2563EB; color:#fff; font-weight:700;
+                display:flex; align-items:center; justify-content:center; font-size: 15pt; }
+  .cover h1 { font-size: 30pt; letter-spacing: -0.5px; line-height: 1.15; }
+  .cover .tag { font-size: 13pt; color: #2563EB; margin-top: 12px; font-weight: 600; }
+  .cover .lede { font-size: 11.5pt; color: #374151; margin-top: 20px; max-width: 135mm; }
+  .rule { margin-top: 30px; padding: 16px 18px; background: #F8FAFC; border-left: 4px solid #14B8A6; border-radius: 6px; }
+  .meta { margin-top: auto; font-size: 9.5pt; color: #6B7280; }
+
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 16pt; margin-bottom: 14px; }
+  .toc ol { columns: 2; column-gap: 16mm; padding-left: 18px; font-size: 10.5pt; }
+  .toc li { margin-bottom: 7px; break-inside: avoid; }
+
+  .feature { page-break-before: always; page-break-inside: avoid; }
+  .fhead { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .num { background:#0B1220; color:#fff; font-size:9pt; font-weight:700; border-radius:6px; padding: 4px 8px; margin-top: 3px; }
+  .feature h2 { font-size: 17pt; letter-spacing: -0.2px; }
+  .where { color:#2563EB; font-size: 9.5pt; font-weight: 600; margin-top: 2px; }
+  figure { margin: 0 0 12px; border:1px solid #E2E8F0; border-radius: 8px; overflow: hidden; background:#fff; }
+  figure img { width: 100%; display: block; }
+  .body { margin: 0 0 10px; color:#374151; }
+  .tips { margin: 0; padding-left: 18px; font-size: 10pt; color:#374151; }
+  .tips li { margin-bottom: 4px; }
+
+  .page { page-break-before: always; }
+  .page h2 { font-size: 17pt; margin-bottom: 12px; }
+  table { width:100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 18px; }
+  th, td { text-align:left; padding: 7px 9px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+  th { background:#F8FAFC; font-size: 9pt; text-transform: uppercase; letter-spacing: .4px; color:#6B7280; }
+  kbd { background:#0B1220; color:#fff; border-radius:4px; padding:1px 6px; font-size:9pt; font-family:inherit; }
+  .note { background:#FFFBEB; border-left:4px solid #F59E0B; padding: 12px 15px; border-radius:6px; font-size:10pt; margin-bottom:14px; }
+  .good { background:#F0FDF4; border-left:4px solid #22C55E; padding: 12px 15px; border-radius:6px; font-size:10pt; margin-bottom:14px; }
+  h3 { font-size: 11.5pt; margin: 16px 0 7px; }
+</style></head>
+<body>
+
+<div class="cover">
+  <div class="logo"><span class="mark">AI</span><span style="font-weight:600;font-size:12pt">Interview Copilot</span></div>
+  <h1>User Guide</h1>
+  <div class="tag">Your experience. Your answers. Real-time interview support.</div>
+  <p class="lede">This guide walks through every feature built so far, with a screenshot of each screen, so you can find your way around before an interview rather than during one.</p>
+  <div class="rule">
+    <strong>The one rule this product is built on.</strong><br>
+    It never invents experience you do not have. Every claim about your background traces back to your resume, a story you wrote, or something you confirmed yourself. Numbers are checked against your evidence before you ever see them. If it cannot support something, it removes it and tells you &mdash; or says plainly that you do not have that experience, and bridges to what you do have.
+  </div>
+  <div class="meta">Generated September 9, 2026 &nbsp;&middot;&nbsp; Screenshots taken from your own account</div>
+</div>
+
+<div class="toc">
+  <h2>What is in here</h2>
+  <ol><li>Dashboard</li><li>Resume Manager</li><li>Verified Experience</li><li>Career Story Library</li><li>Skills &amp; Tools</li><li>Job Opportunities</li><li>Job Match Analysis</li><li>Question Library</li><li>Answer Preparation</li><li>Mock Interview Setup</li><li>Mock Interview</li><li>Live Interview Launch</li><li>Live Interview Copilot</li><li>Post-Interview Report</li><li>Interview History</li>
+    <li>Keyboard shortcuts</li><li>Getting the best out of it</li><li>What it will and will not do</li><li>If something goes wrong</li></ol>
+</div>
+
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">01</span>
+      <div>
+        <h2>Dashboard</h2>
+        <p class="where">Your starting point</p>
+      </div>
+    </div>
+    <figure><img src="img/01-dashboard.png" alt="Dashboard"></figure>
+    <p class="body">Everything opens here. The top row shows how ready you are: verified facts pulled from your resume, career stories on file, transferable skills, and anything still needing your confirmation. Upcoming interviews appear as cards with a match score and two buttons - Prepare, or Launch Copilot if the interview is happening now.</p>
+    <ul class="tips"><li>Launch Live Interview is the big blue button - use it when a real interview is starting.</li><li>The readiness numbers update on their own as you add material.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">02</span>
+      <div>
+        <h2>Resume Manager</h2>
+        <p class="where">My Profile - Resume</p>
+      </div>
+    </div>
+    <figure><img src="img/02-resume-manager.png" alt="Resume Manager"></figure>
+    <p class="body">Drag in a PDF, DOCX or TXT, or paste the text. Analysis runs in the background and takes a minute or two, so you can carry on using the app while it works - the card updates itself from Analyzing to Resume Successfully Analyzed. If something goes wrong it tells you exactly what, and offers a retry.</p>
+    <ul class="tips"><li>You can keep several resumes and mark one as Default.</li><li>Re-analysing refreshes what was extracted without duplicating it.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">03</span>
+      <div>
+        <h2>Verified Experience</h2>
+        <p class="where">My Profile - Verified Experience</p>
+      </div>
+    </div>
+    <figure><img src="img/03-verified-experience.png" alt="Verified Experience"></figure>
+    <p class="body">This is the heart of the product. Every fact the Copilot is allowed to say about you lives here, each traced back to where it came from. Green means it came straight from your resume or a story you wrote. Blue means transferable - related experience, not the exact thing asked for. Amber means unverified, and those are deliberately kept out of live answers until you confirm them.</p>
+    <ul class="tips"><li>Filter by status using the tabs.</li><li>Anything marked Unverified will never appear in a live interview answer.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">04</span>
+      <div>
+        <h2>Career Story Library</h2>
+        <p class="where">My Profile - Career Stories</p>
+      </div>
+    </div>
+    <figure><img src="img/04-career-stories.png" alt="Career Story Library"></figure>
+    <p class="body">Your STAR stories - situation, task, action, result. The system suggests these from your resume, and you can edit them or write your own. In an interview these are what the Copilot reaches for first, because a story you wrote is stronger evidence than a bullet point.</p>
+    <ul class="tips"><li>Add metrics where you have them; they make an answer land harder.</li><li>Stories you edit are never overwritten when a resume is re-analysed.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">05</span>
+      <div>
+        <h2>Skills &amp; Tools</h2>
+        <p class="where">My Profile - Skills &amp; Tools</p>
+      </div>
+    </div>
+    <figure><img src="img/05-skills-tools.png" alt="Skills &amp; Tools"></figure>
+    <p class="body">Platforms, systems and skills with a proficiency level and where you used each one. This is what lets the Copilot answer a question about a tool honestly - naming what you have used directly, and what is only comparable.</p>
+    
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">06</span>
+      <div>
+        <h2>Job Opportunities</h2>
+        <p class="where">Jobs - Job Opportunities</p>
+      </div>
+    </div>
+    <figure><img src="img/06-job-opportunities.png" alt="Job Opportunities"></figure>
+    <p class="body">Every role you are pursuing, with its stage and match score. Add a job by pasting the posting; the requirements are extracted automatically and matched against your background.</p>
+    <ul class="tips"><li>The match score only appears once analysis finishes.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">07</span>
+      <div>
+        <h2>Job Match Analysis</h2>
+        <p class="where">Jobs - Job Analysis</p>
+      </div>
+    </div>
+    <figure><img src="img/07-job-analysis.png" alt="Job Match Analysis"></figure>
+    <p class="body">How you actually line up against a posting, requirement by requirement. Each one is sorted into verified matches, transferable matches, things needing your confirmation, and true gaps - with the evidence quoted underneath. This is the honest picture, not a keyword count.</p>
+    <ul class="tips"><li>True gaps are worth preparing for - they are the questions most likely to catch you out.</li><li>Re-run match after adding new experience.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">08</span>
+      <div>
+        <h2>Question Library</h2>
+        <p class="where">Prepare - Question Library</p>
+      </div>
+    </div>
+    <figure><img src="img/08-question-library.png" alt="Question Library"></figure>
+    <p class="body">Questions predicted for this specific job and this specific resume, tagged by category, likelihood and difficulty. They include the uncomfortable ones - gaps in your history, claims worth challenging, dates that invite a question.</p>
+    <ul class="tips"><li>Sort by difficulty and rehearse the hard ones first.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">09</span>
+      <div>
+        <h2>Answer Preparation</h2>
+        <p class="where">Prepare - Answer Library</p>
+      </div>
+    </div>
+    <figure><img src="img/09-answer-preparation.png" alt="Answer Preparation"></figure>
+    <p class="body">A grounded answer for any question, at three lengths - roughly 15, 30 and 60 seconds. Underneath, the cue cards you would actually glance at, and a note of how many verified facts the answer rests on. Approve one and it is saved.</p>
+    <ul class="tips"><li>Saved answers load instantly - it will not regenerate unless you ask.</li><li>Regenerating replaces a saved answer and clears its approval.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">10</span>
+      <div>
+        <h2>Mock Interview Setup</h2>
+        <p class="where">Practice - Mock Interview</p>
+      </div>
+    </div>
+    <figure><img src="img/10-mock-setup.png" alt="Mock Interview Setup"></figure>
+    <p class="body">Choose the job, the interview type, the difficulty, and how long you want to go. Leave Use Job Description and Use My Resume on - they are what make the interviewer ask about your actual background rather than generic questions.</p>
+    <ul class="tips"><li>Verified Experience Only keeps the interviewer to evidence you can defend.</li><li>Challenging and Aggressive Follow-Up press much harder on gaps.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">11</span>
+      <div>
+        <h2>Mock Interview</h2>
+        <p class="where">Practice - in session</p>
+      </div>
+    </div>
+    <figure><img src="img/11-mock-session.png" alt="Mock Interview"></figure>
+    <p class="body">The interviewer asks each question out loud in a female voice, and questions come back in under three seconds so the conversation keeps its rhythm. Coaching On shows a suggested answer under the conversation, grounded in your verified experience, for you to read and practise aloud. Answer by typing or by microphone.</p>
+    <ul class="tips"><li>Repeat Question plays it again without regenerating.</li><li>The speaker icon mutes the voice.</li><li>Say it in your own words - do not recite the suggestion.</li><li>Your microphone mutes automatically while the interviewer is speaking.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">12</span>
+      <div>
+        <h2>Live Interview Launch</h2>
+        <p class="where">Live - before you start</p>
+      </div>
+    </div>
+    <figure><img src="img/12-live-launch.png" alt="Live Interview Launch"></figure>
+    <p class="body">A pre-flight check before a real interview: which job, how many facts are verified, and anything unresolved. Unconfirmed items are simply left out of your answers. Pick a response length and display mode, confirm you understand the recording and consent note, and launch.</p>
+    <ul class="tips"><li>Compact and Discreet modes are for sitting beside a video call.</li><li>Use a desktop browser for live interviews.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">13</span>
+      <div>
+        <h2>Live Interview Copilot</h2>
+        <p class="where">Live - during the interview</p>
+      </div>
+    </div>
+    <figure><img src="img/13-live-copilot.png" alt="Live Interview Copilot"></figure>
+    <p class="body">The screen that matters. It listens, detects the question, and starts writing an answer within a few seconds. SAY THIS is what you say. REMEMBER THIS is what you glance at while speaking - the story in play, the key points, each tagged with where it came from. The green line confirms how many verified facts the answer rests on. If it ever strips an unsupported claim, it tells you before you say it.</p>
+    <ul class="tips"><li>Type a question instead if the audio misses one.</li><li>Switch Story if you would rather use a different example.</li><li>It warns you when a story has already been used in this interview.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">14</span>
+      <div>
+        <h2>Post-Interview Report</h2>
+        <p class="where">History - after the interview</p>
+      </div>
+    </div>
+    <figure><img src="img/14-post-interview-report.png" alt="Post-Interview Report"></figure>
+    <p class="body">Generated in the background as soon as you end the interview. It covers what went well, what an employer might be concerned about, themes that kept coming up, and anything the employer revealed about the role. A thank-you email is drafted from what was actually discussed. If something was not discussed, it says so rather than inventing it.</p>
+    <ul class="tips"><li>The email can be regenerated in a warmer or more concise tone.</li></ul>
+  </section>
+
+  <section class="feature">
+    <div class="fhead">
+      <span class="num">15</span>
+      <div>
+        <h2>Interview History</h2>
+        <p class="where">History</p>
+      </div>
+    </div>
+    <figure><img src="img/15-interview-history.png" alt="Interview History"></figure>
+    <p class="body">Every practice and live session, with scores and outcomes, so you can see whether you are improving. You can delete any session and its transcript.</p>
+    
+  </section>
+
+<div class="page">
+  <h2>Keyboard shortcuts</h2>
+  <p class="body">These work during a live interview, when your hands should be nowhere near the mouse.</p>
+  <table>
+    <tr><th>Key</th><th>Does</th></tr>
+    <tr><td><kbd>Q</kbd></td><td>Quick Glance &mdash; strips the screen down to cues only</td></tr>
+    <tr><td><kbd>S</kbd></td><td>Rebuild the answer in STAR shape</td></tr>
+    <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Answer length: about 15, 30 or 60 seconds</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Regenerate the answer</td></tr>
+    <tr><td><kbd>M</kbd></td><td>Jump to the box to type a question</td></tr>
+    <tr><td><kbd>P</kbd></td><td>Pause or resume listening</td></tr>
+    <tr><td><kbd>H</kbd></td><td>Hide &mdash; shrink to Discreet mode</td></tr>
+    <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Send a typed question</td></tr>
+  </table>
+
+  <h2>Getting the best out of it</h2>
+  <h3>Before an interview</h3>
+  <ul class="tips">
+    <li>Add the job posting and let the match analysis run &mdash; it drives the questions you are asked in practice.</li>
+    <li>Read your true gaps and rehearse those answers. They are the questions most likely to catch you out.</li>
+    <li>Confirm anything sitting in Needs Review, or it stays out of your live answers.</li>
+    <li>Do at least one mock interview out loud. Reading an answer is not the same skill as saying it.</li>
+  </ul>
+  <h3>During a live interview</h3>
+  <ul class="tips">
+    <li>Glance at REMEMBER THIS, not SAY THIS. Reading a paragraph aloud sounds exactly like reading a paragraph aloud.</li>
+    <li>If the audio misses a question, type it &mdash; faster than waiting or repeating yourself.</li>
+    <li>Use a second screen or Compact mode so you are not visibly reading.</li>
+  </ul>
+</div>
+
+<div class="page">
+  <h2>What it will and will not do</h2>
+  <div class="good">
+    <strong>It will refuse to invent.</strong> Asked for a metric you cannot prove, it says so. Asked about a platform you have not used, it says that plainly and bridges to the closest thing you have actually done. Asked for a dramatic conflict story when your history does not contain one, it will tell you it would rather not make one up. That is deliberate: you have to keep defending whatever it says for the next ten minutes.
+  </div>
+  <div class="note">
+    <strong>Known limits, stated honestly.</strong>
+    <ul style="margin:8px 0 0;padding-left:18px">
+      <li>It cannot tell your voice from the interviewer's. With one microphone there is no speaker separation, so it may occasionally treat something you say as a question. Press <kbd>P</kbd> to pause while you talk.</li>
+      <li>Speech recognition is imperfect and will mishear words. Answers are still generated correctly from noisy text.</li>
+      <li>Number checking is automatic and reliable. Narrative checking &mdash; people, events, details &mdash; relies on instructions to the model, which is a weaker guarantee. If you see an answer describing a person or event you do not recognise, that is worth reporting.</li>
+      <li>Live interviews need Chrome or Edge on a desktop. Voice features do not work in Firefox or Safari.</li>
+      <li>Resume analysis takes a minute or two, and the post-interview report about forty seconds. Both run in the background so you are never stuck waiting on a frozen screen.</li>
+    </ul>
+  </div>
+
+  <h2>If something goes wrong</h2>
+  <table>
+    <tr><th>What you see</th><th>What to do</th></tr>
+    <tr><td>Credit balance is too low</td><td>Add credits at console.anthropic.com under Plans &amp; Billing. Turn on auto-reload so it cannot happen mid-interview.</td></tr>
+    <tr><td>Nothing happens when you speak</td><td>Check the header says LISTENING and that the browser has microphone permission. Type the question as a fallback.</td></tr>
+    <tr><td>Analysis stopped unexpectedly</td><td>The server restarted mid-job. Press the retry button on the card.</td></tr>
+    <tr><td>The voice sounds robotic</td><td>Windows Settings &rarr; Time &amp; Language &rarr; Speech &rarr; Add voices. Install Aria or Jenny; they are picked up automatically.</td></tr>
+    <tr><td>An answer mentions something you do not recognise</td><td>Report it. Narrative grounding is the weakest guarantee in the system, and that is the failure mode to watch for.</td></tr>
+  </table>
+</div>
+
+</body></html>
