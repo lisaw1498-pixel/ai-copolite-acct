@@ -50,6 +50,7 @@ type Job = {
 };
 
 type AnswerState = { text: string; source: string | null; approved: boolean; loading: boolean };
+type ShortenState = { total: number; withShort: number; pending: number; running: boolean };
 type Story = {
   id: string;
   title: string;
@@ -78,6 +79,7 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
   const [job, setJob] = useState<Job | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
+  const [shorten, setShorten] = useState<ShortenState | null>(null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   // Your own questions start open because there are usually a handful. The
   // predicted list runs to 25+ and would otherwise bury everything below it.
@@ -218,6 +220,30 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
   async function removeQuestion(qid: string) {
     await fetch(`/api/questions/${qid}`, { method: "DELETE" });
     await load();
+  }
+
+  const loadShorten = useCallback(async () => {
+    const d = await fetch(`/api/jobs/${id}/answers/shorten`).then((r) => r.json());
+    if (typeof d.total === "number") setShorten(d);
+    return d as ShortenState;
+  }, [id]);
+
+  useEffect(() => {
+    void loadShorten();
+  }, [loadShorten]);
+
+  // One model call per answer, so this runs in the background and the count
+  // ticks up as each one lands.
+  useEffect(() => {
+    if (!shorten?.running) return;
+    const t = setInterval(() => void loadShorten(), 3000);
+    return () => clearInterval(t);
+  }, [shorten?.running, loadShorten]);
+
+  async function buildShortVersions() {
+    setShorten((s) => (s ? { ...s, running: true } : s));
+    await fetch(`/api/jobs/${id}/answers/shorten`, { method: "POST" });
+    await loadShorten();
   }
 
   /** Loads whatever answer already exists, without generating a new one. */
@@ -561,6 +587,32 @@ export default function InterviewPrepHub({ params }: { params: Promise<{ id: str
             </Button>
           }
         />
+
+        {shorten && shorten.total > 0 && (
+          <div className="px-5 py-4 border-b border-surface-border">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-navy/80">Short versions</p>
+                <p className="mt-0.5 text-xs text-navy/45">
+                  Open with two or three sentences and keep the rest back. A tight first answer
+                  invites &ldquo;tell me more&rdquo; and gives you a second turn on the same ground.
+                  During an interview you get the short one, with the full answer one tap away.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={buildShortVersions}
+                disabled={shorten.running || shorten.pending === 0}
+              >
+                {shorten.running
+                  ? `Writing... ${shorten.withShort}/${shorten.total}`
+                  : shorten.pending === 0
+                  ? `All ${shorten.total} done`
+                  : `Create ${shorten.pending} short version${shorten.pending === 1 ? "" : "s"}`}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="px-5 py-4 border-b border-surface-border">
           <label className="text-sm font-medium text-navy/80">Add a question you expect</label>

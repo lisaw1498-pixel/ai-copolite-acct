@@ -86,28 +86,38 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       )
       .all();
 
-    const wanted: "short" | "standard" | "long" =
-      body.responseLength === "short" ? "short" : body.responseLength === "long" ? "long" : "standard";
-
+    // Both lengths go back together. The candidate opens with the short one
+    // and expands only if the interviewer asks for more, and that ask comes
+    // mid-conversation - there is no room to wait on a second request.
     const usable = prepared
-      .map((p) => ({
-        question: p.question,
-        // Fall back across lengths: an answer written only at standard length
-        // is still the answer they prepared.
-        text: (p[wanted] || p.standard || p.long || p.short || "").trim(),
-      }))
-      .filter((p) => p.text.length > 0);
+      .map((p) => {
+        const full = (p.standard || p.long || p.short || "").trim();
+        const short = (p.short || "").trim();
+        return {
+          question: p.question,
+          full,
+          // Only a genuinely shorter version counts. Answers saved before
+          // short versions existed hold the same text in every column.
+          short: short && short !== full ? short : null,
+        };
+      })
+      .filter((p) => p.full.length > 0);
 
     const hit = matchPreparedQuestion(question, usable.map((p) => ({ item: p, question: p.question })));
     if (hit) {
+      const { short, full, question: matched } = hit.item;
+      const opening = short ?? full;
       return sseOnce({
-        delta: hit.item.text,
+        delta: opening,
         cues: { remember_this: [], grounding: "prepared" },
         final: {
-          generated: { say_this: hit.item.text, remember_this: [] },
+          generated: { say_this: opening, remember_this: [] },
           corrected: false,
           source: "prepared",
-          matchedQuestion: hit.item.question,
+          matchedQuestion: matched,
+          shortAnswer: short,
+          fullAnswer: full,
+          hasMore: Boolean(short),
         },
       });
     }

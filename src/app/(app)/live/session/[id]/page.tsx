@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { looksLikeQuestion, hasEnoughQuestionContext } from "@/lib/question-detection";
 import { VerificationBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Mic,
   MicOff,
@@ -64,6 +65,9 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
   // state rather than waiting on `currentAnswer`.
   const [earlyCues, setEarlyCues] = useState<LiveAnswer["remember_this"]>([]);
   const [earlyStoryId, setEarlyStoryId] = useState<string | null>(null);
+  // The fuller version of a prepared answer, held back until they probe.
+  const [moreDetail, setMoreDetail] = useState<string | null>(null);
+  const [showingMore, setShowingMore] = useState(false);
   const [correction, setCorrection] = useState<string[] | null>(null);
 
   const manualRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +97,8 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
       setEarlyCues([]);
       setEarlyStoryId(null);
       setCorrection(null);
+      setMoreDetail(null);
+      setShowingMore(false);
       // Show the question immediately - waiting for the model to respond before
       // acknowledging it makes the copilot feel broken mid-interview.
       setCurrentQuestion(question);
@@ -159,6 +165,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
               setCorrection(payload.removed ?? []);
             } else if (event === "final") {
               setCurrentAnswer(payload.generated);
+              if (payload.hasMore && payload.fullAnswer) setMoreDetail(payload.fullAnswer);
               setAvailableStories(payload.availableStories ?? []);
               setStoryAlreadyUsed(Boolean(payload.storyAlreadyUsed));
               setIsFollowUpAnswer(Boolean(payload.generated?.is_follow_up ?? isFollowUp));
@@ -318,7 +325,7 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
           {/* Tokens paint as they arrive; the finalised answer replaces them. */}
           {(currentAnswer || streamingText) && (
             <p className={clsx("text-navy leading-relaxed", isDiscreet ? "text-sm" : "text-base")}>
-              {currentAnswer ? currentAnswer.say_this : streamingText}
+              {showingMore && moreDetail ? moreDetail : currentAnswer ? currentAnswer.say_this : streamingText}
               {!currentAnswer && <span className="ml-0.5 inline-block animate-pulse text-brand-blue">▍</span>}
             </p>
           )}
@@ -327,6 +334,20 @@ export default function LiveSessionPage({ params }: { params: Promise<{ id: stri
           )}
           {!loading && !currentAnswer && !streamingText && (
             <p className="text-sm text-navy/40">Your personalized answer will appear here.</p>
+          )}
+
+          {/* Open short, expand only if they probe. Mid-interview this has to
+              be one tap with nothing to wait for, so both versions arrived
+              together with the answer. */}
+          {moreDetail && !loading && (
+            <div className="mt-3 flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowingMore((v) => !v)}>
+                {showingMore ? "Back to the short version" : "They asked for more"}
+              </Button>
+              {!showingMore && (
+                <span className="text-[11px] text-navy/45">More detail ready if they probe.</span>
+              )}
+            </div>
           )}
 
           {correction && correction.length > 0 && (

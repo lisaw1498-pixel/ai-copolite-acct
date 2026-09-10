@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2, Lightbulb, ShieldCheck } from "lucide-react";
+import { Mic, MicOff, Send, StopCircle, Volume2, VolumeX, Loader2, Lightbulb, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { useSpeechSynthesis } from "@/lib/use-speech-synthesis";
 
@@ -42,6 +42,9 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   // Whether what is on screen is the answer the candidate wrote for this
   // question, rather than one generated just now.
   const [suggestionSource, setSuggestionSource] = useState<"prepared" | "generated">("generated");
+  // The fuller version, held back until the interviewer asks for more.
+  const [suggestionMore, setSuggestionMore] = useState<string | null>(null);
+  const [showingMore, setShowingMore] = useState(false);
   const suggestedForRef = useRef<string | null>(null);
 
   const { start, stop, listening, supported } = useSpeechRecognition((text, isFinal) => {
@@ -134,6 +137,8 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
       setSuggestion("");
       setSuggestionCues([]);
       setSuggestionSource("generated");
+      setSuggestionMore(null);
+      setShowingMore(false);
       try {
         const res = await fetch(`/api/sessions/${id}/suggest`, {
           method: "POST",
@@ -170,6 +175,7 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
               setSuggestion(payload.generated.say_this);
               setSuggestionCues((payload.generated.remember_this ?? []).slice(0, 6));
               if (payload.source === "prepared") setSuggestionSource("prepared");
+              if (payload.hasMore && payload.fullAnswer) setSuggestionMore(payload.fullAnswer);
             } else if (ev === "error") {
               setSuggestion(payload.error || "Couldn't suggest an answer.");
             }
@@ -319,10 +325,33 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
             <p className="mt-2 text-sm text-navy/50">Finding your strongest verified experience...</p>
           )}
           {suggestion && (
-            <p className="mt-2 text-sm leading-relaxed text-navy">
-              {suggestion}
+            <p className="mt-2 text-sm leading-relaxed text-navy whitespace-pre-line">
+              {showingMore && suggestionMore ? suggestionMore : suggestion}
               {suggesting && <span className="ml-0.5 inline-block animate-pulse text-brand-blue">▍</span>}
             </p>
+          )}
+
+          {/* Open short, expand only if they probe. The button is the cue to
+              stop talking and let the interviewer come back to you. */}
+          {suggestionMore && !suggesting && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowingMore((v) => !v)}>
+                {showingMore ? (
+                  <>
+                    <ChevronUp size={13} /> Back to the short version
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={13} /> They asked for more
+                  </>
+                )}
+              </Button>
+              {!showingMore && (
+                <span className="text-[11px] text-navy/45">
+                  Say this much, then stop. You have more ready if they probe.
+                </span>
+              )}
+            </div>
           )}
 
           {suggestionCues.length > 0 && (
