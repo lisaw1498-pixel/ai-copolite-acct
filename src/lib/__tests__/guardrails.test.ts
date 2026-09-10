@@ -205,3 +205,63 @@ test("job-scoped facts are hidden when there is no job in play", () => {
   assert.deepEqual(visibleForJob(facts, null).map((f) => f.id), ["resume"]);
   assert.deepEqual(visibleForJob(facts, undefined).map((f) => f.id), ["resume"]);
 });
+
+// ---------------------------------------------------------------------------
+// Resume scoping. Two tailored versions of a CV describe the same career
+// differently; answering from both at once produces claims the candidate
+// cannot reconcile in the room.
+// ---------------------------------------------------------------------------
+
+/** Mirrors the filter in getUserFacts, without needing a database. */
+function visibleFor<T extends { jobId?: string | null; sourceType?: string; sourceId?: string | null }>(
+  facts: T[],
+  opts: { jobId?: string | null; resumeId?: string | null } = {}
+): T[] {
+  const { jobId = null, resumeId = null } = opts;
+  return facts.filter((f) => {
+    if (f.jobId && f.jobId !== jobId) return false;
+    if (resumeId && f.sourceType === "resume" && f.sourceId && f.sourceId !== resumeId) return false;
+    return true;
+  });
+}
+
+test("a job only sees facts from the resume it selected", () => {
+  const facts = [
+    { id: "a", sourceType: "resume", sourceId: "resume-a" },
+    { id: "b", sourceType: "resume", sourceId: "resume-b" },
+  ];
+  assert.deepEqual(visibleFor(facts, { resumeId: "resume-a" }).map((f) => f.id), ["a"]);
+  assert.deepEqual(visibleFor(facts, { resumeId: "resume-b" }).map((f) => f.id), ["b"]);
+});
+
+test("story and user-confirmed facts apply whichever resume is selected", () => {
+  const facts = [
+    { id: "story", sourceType: "career_story", sourceId: "s1" },
+    { id: "confirmed", sourceType: "user", sourceId: null },
+    { id: "resume-a", sourceType: "resume", sourceId: "resume-a" },
+  ];
+  assert.deepEqual(
+    visibleFor(facts, { resumeId: "resume-b" }).map((f) => f.id),
+    ["story", "confirmed"]
+  );
+});
+
+test("resume and job scoping apply together", () => {
+  const facts = [
+    { id: "resume-a", sourceType: "resume", sourceId: "resume-a" },
+    { id: "resume-b", sourceType: "resume", sourceId: "resume-b" },
+    { id: "approved-elsewhere", sourceType: "approved_answer", sourceId: "x", jobId: "job-b" },
+  ];
+  assert.deepEqual(
+    visibleFor(facts, { resumeId: "resume-a", jobId: "job-a" }).map((f) => f.id),
+    ["resume-a"]
+  );
+});
+
+test("with no resume selected, every resume fact is still available", () => {
+  const facts = [
+    { id: "a", sourceType: "resume", sourceId: "resume-a" },
+    { id: "b", sourceType: "resume", sourceId: "resume-b" },
+  ];
+  assert.equal(visibleFor(facts, {}).length, 2);
+});

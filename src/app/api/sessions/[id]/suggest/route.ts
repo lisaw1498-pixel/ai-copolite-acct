@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { interviewSessions, jobs } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { generateAnswerStreaming } from "@/lib/ai/generate-answer";
-import { getUserFacts, getUserStories } from "@/lib/facts";
+import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { rankFacts, rankStories } from "@/lib/retrieval";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
 
@@ -39,7 +39,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     : null;
 
   const retrievalQuery = { question, conversationContext: body.previousQuestion ?? "", jobContext };
-  const facts = rankFacts(getUserFacts(user.id, session.jobId), retrievalQuery);
+  const facts = rankFacts(getUserFacts(user.id, {
+    jobId: session.jobId,
+    resumeId: resolveResumeId(user.id, job?.resumeId),
+  }), retrievalQuery);
   const stories = rankStories(getUserStories(user.id), retrievalQuery);
 
   const encoder = new TextEncoder();

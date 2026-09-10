@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { generateAnswerStreaming } from "@/lib/ai/generate-answer";
-import { getUserFacts, getUserStories } from "@/lib/facts";
+import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { rankFacts, rankStories } from "@/lib/retrieval";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
 
@@ -64,7 +64,10 @@ ${job.jobDescriptionRaw?.slice(0, 2000) ?? ""}`
     conversationContext: [body.previousQuestion, body.previousAnswer].filter(Boolean).join(" "),
     jobContext,
   };
-  const allFacts = getUserFacts(user.id, session.jobId);
+  const allFacts = getUserFacts(user.id, {
+    jobId: session.jobId,
+    resumeId: resolveResumeId(user.id, job?.resumeId),
+  });
   const allStories = getUserStories(user.id);
   const facts = rankFacts(allFacts, retrievalQuery);
   const stories = rankStories(allStories, retrievalQuery);

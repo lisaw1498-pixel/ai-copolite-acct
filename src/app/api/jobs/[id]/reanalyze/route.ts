@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { jobRequirements, jobs } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { matchJobToFacts } from "@/lib/ai/extract";
-import { getUserFacts } from "@/lib/facts";
+import { getUserFacts, resolveResumeId } from "@/lib/facts";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +20,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const facts = getUserFacts(user.id, id);
+    const facts = getUserFacts(user.id, { jobId: id, resumeId: resolveResumeId(user.id, job.resumeId) });
     const match = await matchJobToFacts(
       requirements.map((r) => ({ requirement: r.requirement, category: r.category || "", priority: r.priority || "" })),
       facts

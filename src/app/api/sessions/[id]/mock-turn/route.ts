@@ -5,7 +5,7 @@ import { interviewQuestions, interviewSessions, interviewTurns, jobRequirements,
 import { and, asc, eq } from "drizzle-orm";
 import { nextMockInterviewerTurn, scoreMockAnswer } from "@/lib/ai/mock-interviewer";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
-import { getUserFacts, getUserStories } from "@/lib/facts";
+import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { startJob } from "@/lib/jobs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -65,7 +65,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let candidateSummary: string | null = null;
   if (useResume) {
     const verifiedOnly = config.verifiedOnly !== false;
-    const facts = getUserFacts(user.id, session.jobId).filter(
+    const facts = getUserFacts(user.id, {
+      jobId: session.jobId,
+      resumeId: resolveResumeId(user.id, job?.resumeId),
+    }).filter(
       (f) => !verifiedOnly || f.verificationStatus.startsWith("verified_") || f.verificationStatus === "transferable"
     );
     const stories = getUserStories(user.id);

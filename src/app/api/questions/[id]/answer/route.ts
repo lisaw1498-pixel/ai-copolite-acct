@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { answerFactLinks, candidateFacts, interviewQuestions, jobs, preparedAnswers } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { generateAnswer } from "@/lib/ai/generate-answer";
-import { getUserFacts, getUserStories } from "@/lib/facts";
+import { getUserFacts, getUserStories, resolveResumeId } from "@/lib/facts";
 import { AIConfigError, AIServiceError } from "@/lib/ai/client";
 
 /**
@@ -115,7 +115,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
   const job = question.jobId ? db.select().from(jobs).where(eq(jobs.id, question.jobId)).get() : null;
-  const facts = getUserFacts(user.id, question.jobId);
+  const facts = getUserFacts(user.id, {
+    jobId: question.jobId,
+    resumeId: resolveResumeId(user.id, job?.resumeId),
+  });
   const stories = getUserStories(user.id);
 
   try {

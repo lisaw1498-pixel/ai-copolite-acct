@@ -8,7 +8,7 @@ import {
   skills,
   technologies,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { ExtractedResume } from "./ai/extract";
 import { FactForPrompt, StoryForPrompt } from "./ai/types";
 
@@ -20,13 +20,48 @@ import { FactForPrompt, StoryForPrompt } from "./ai/types";
  * answer approved for a specific job stay with that job, so wording shaped for
  * one company never resurfaces as evidence at another.
  */
-export function getUserFacts(userId: string, jobId?: string | null): FactForPrompt[] {
+/**
+ * Resolves which resume a job should draw on: the one chosen for that job, or
+ * the default. Tailored resumes describe the same career differently, and
+ * mixing two versions produces contradictory answers.
+ */
+export function resolveResumeId(userId: string, jobResumeId?: string | null): string | null {
+  if (jobResumeId) return jobResumeId;
+  const def = db
+    .select()
+    .from(resumes)
+    .where(and(eq(resumes.userId, userId), eq(resumes.isDefault, true)))
+    .get();
+  return def?.id ?? null;
+}
+
+/**
+ * Facts the copilot may use for a given interview.
+ *
+ * Three rules, all about keeping one interview's material out of another's:
+ *  - Resume facts are limited to the resume selected for this job. Two
+ *    tailored versions of a CV disagree with each other, and answering from
+ *    both produces claims the candidate cannot reconcile in the room.
+ *  - Facts created from an answer approved for a specific job stay with that
+ *    job.
+ *  - Story, project and user-confirmed facts always apply; they are the
+ *    candidate's experience regardless of which CV is in play.
+ */
+export function getUserFacts(
+  userId: string,
+  opts: { jobId?: string | null; resumeId?: string | null } = {}
+): FactForPrompt[] {
+  const { jobId = null, resumeId = null } = opts;
   const rows = db
     .select()
     .from(candidateFacts)
     .where(eq(candidateFacts.userId, userId))
     .all()
-    .filter((r) => !r.jobId || r.jobId === jobId);
+    .filter((r) => {
+      if (r.jobId && r.jobId !== jobId) return false;
+      if (resumeId && r.sourceType === "resume" && r.sourceId && r.sourceId !== resumeId) return false;
+      return true;
+    });
   return rows.map((r) => ({
     id: r.id,
     factType: r.factType,
