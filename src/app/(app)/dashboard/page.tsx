@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                   </p>
                   <p className="text-xs text-navy/50 mt-1">
                     {upcoming.interviewDate ? `${upcoming.interviewDate} ${upcoming.interviewTime ?? ""}` : "No date set"} ·{" "}
-                    {upcoming.interviewStage || "Stage not set"}
+                    {upcoming.interviewStage?.replace(/_/g, " ") || "Stage not set"}
                     {upcoming.interviewerName ? ` · with ${upcoming.interviewerName}` : ""}
                   </p>
                 </div>

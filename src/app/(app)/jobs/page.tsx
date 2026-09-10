@@ -31,6 +31,11 @@ const STATUS_TONE: Record<string, "neutral" | "blue" | "teal" | "amber" | "green
   withdrawn: "neutral",
 };
 
+/** Turns a stored value like "hiring_manager" into "hiring manager". */
+function humanize(value: string): string {
+  return value.replace(/_/g, " ");
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -144,8 +149,12 @@ export default function JobsPage() {
               </div>
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Pill tone={STATUS_TONE[j.status] ?? "neutral"}>{j.status.replace(/_/g, " ")}</Pill>
-              {j.interviewStage && <Pill>{j.interviewStage}</Pill>}
+              <Pill tone={STATUS_TONE[j.status] ?? "neutral"}>{humanize(j.status)}</Pill>
+              {/* Setting a stage also moves the status, so the two usually hold
+                  the same value and rendered as two identical tags. */}
+              {j.interviewStage && j.interviewStage !== j.status && (
+                <Pill>{humanize(j.interviewStage)}</Pill>
+              )}
               {j.interviewDate && <Pill>{j.interviewDate}</Pill>}
             </div>
             {confirmingDelete === j.id ? (
