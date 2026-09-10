@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { pollResumeStatus } from "@/lib/poll-resume";
 import { PageHeader } from "@/components/page-header";
 import { UploadCloud, FileText, Star, Trash2, RefreshCw, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +18,20 @@ type Resume = {
   updatedAt: string;
 };
 
+/**
+ * How long the current analysis has been running, as m:ss.
+ *
+ * `updatedAt` is the start of this run, not the upload: re-analysing an old
+ * resume resets it, so a retry doesn't report hours of elapsed time. Clamped at
+ * zero because the server clock sets it and a second of drift would otherwise
+ * show a negative number.
+ */
+function elapsedLabel(r: Resume, now: number): string {
+  const startedAt = new Date(r.updatedAt || r.createdAt).getTime();
+  const secs = Math.max(0, Math.floor((now - startedAt) / 1000));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+}
+
 export default function ResumeManagerPage() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +39,7 @@ export default function ResumeManagerPage() {
   const [pastedText, setPastedText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showPaste, setShowPaste] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -38,6 +52,34 @@ export default function ResumeManagerPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const analyzing = useMemo(() => resumes.filter((r) => r.status === "processing"), [resumes]);
+
+  /**
+   * Keep refreshing while anything is still being analyzed.
+   *
+   * This used to poll only the resume the current visit had just uploaded, so
+   * reloading the page or navigating away and back during the ~2 minute
+   * analysis left the row spinning on "Analyzing your experience..." with
+   * nothing behind it. Driving the poll off the list instead means any
+   * in-flight analysis resolves on screen, whenever the page is opened.
+   */
+  useEffect(() => {
+    if (analyzing.length === 0) return;
+    const id = setInterval(() => {
+      void load();
+      setNow(Date.now());
+    }, 3000);
+    return () => clearInterval(id);
+  }, [analyzing.length, load]);
+
+  // Separate, faster tick so the elapsed counter moves every second rather
+  // than jumping three seconds at a time with the poll.
+  useEffect(() => {
+    if (analyzing.length === 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [analyzing.length]);
 
   async function upload(file?: File, text?: string) {
     setUploading(true);
@@ -55,14 +97,8 @@ export default function ResumeManagerPage() {
     }
     setPastedText("");
     setShowPaste(false);
-    await load();
-
-    // Analysis continues in the background - refresh the row as it progresses
-    // so the card moves from Processing to Analyzed on its own.
-    const final = await pollResumeStatus(data.resume.id, () => {
-      void load();
-    });
-    if (final.status === "failed" && final.statusMessage) setError(final.statusMessage);
+    // Analysis continues in the background. The polling effect above takes it
+    // from here and moves the row from Analyzing to Analyzed on its own.
     await load();
   }
 
@@ -74,15 +110,6 @@ export default function ResumeManagerPage() {
       body: JSON.stringify({ action }),
     });
     await load();
-
-    // Re-analysis is a background job too.
-    if (action === "reanalyze") {
-      const final = await pollResumeStatus(id, () => {
-        void load();
-      });
-      if (final.status === "failed" && final.statusMessage) setError(final.statusMessage);
-      await load();
-    }
   }
 
   async function remove(id: string) {
@@ -153,10 +180,18 @@ export default function ResumeManagerPage() {
         </Card>
       )}
 
-      {uploading && (
-        <div className="flex items-center gap-2 text-sm text-navy/60">
-          <Loader2 className="animate-spin" size={16} /> Analyzing your resume with AI — extracting
-          employers, skills, metrics, and accomplishments...
+      {(uploading || analyzing.length > 0) && (
+        <div className="flex items-start gap-2 rounded-lg border border-brand-blue/25 bg-brand-blue/5 px-3 py-2.5 text-sm text-navy/70">
+          <Loader2 className="animate-spin mt-0.5 shrink-0 text-brand-blue" size={16} />
+          <span>
+            {uploading
+              ? "Uploading..."
+              : "Reading your resume and pulling out every employer, title, date, skill and metric."}{" "}
+            <span className="text-navy/50">
+              This takes about two minutes. You can leave this page — it keeps running, and the
+              status here updates on its own.
+            </span>
+          </span>
         </div>
       )}
       {error && (
@@ -198,7 +233,8 @@ export default function ResumeManagerPage() {
                     )}
                     {r.status === "processing" && (
                       <span className="inline-flex items-center gap-1">
-                        <Loader2 size={12} className="animate-spin" /> Analyzing your experience...
+                        <Loader2 size={12} className="animate-spin" /> Analyzing your experience —{" "}
+                        {elapsedLabel(r, now)} elapsed, usually about 2 minutes
                       </span>
                     )}
                     {r.status === "failed" && (

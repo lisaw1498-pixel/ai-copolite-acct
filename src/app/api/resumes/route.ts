@@ -6,7 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { extractTextFromUpload } from "@/lib/parsing";
 import { extractResumeFacts } from "@/lib/ai/extract";
 import { applyExtractedResume, markResumeAnalyzed, markResumeFailed } from "@/lib/facts";
-import { jobKeys, startJob } from "@/lib/jobs";
+import { isStale, jobKeys, startJob } from "@/lib/jobs";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -17,7 +17,23 @@ export async function GET() {
     .where(eq(resumes.userId, user.id))
     .orderBy(desc(resumes.createdAt))
     .all();
-  return NextResponse.json({ resumes: rows });
+
+  // Same staleness check the single-resume endpoint does. A row still marked
+  // "processing" with no live job behind it means the server restarted
+  // mid-analysis; without this the list spins on it forever and the only
+  // apparent fix is to delete and re-upload.
+  return NextResponse.json({
+    resumes: rows.map((r) => {
+      const stale = isStale(jobKeys.resume(r.id), r.status);
+      return {
+        ...r,
+        status: stale ? "failed" : r.status,
+        statusMessage: stale
+          ? "Analysis stopped unexpectedly (the server restarted). Try analyzing again."
+          : r.statusMessage,
+      };
+    }),
+  });
 }
 
 /**
