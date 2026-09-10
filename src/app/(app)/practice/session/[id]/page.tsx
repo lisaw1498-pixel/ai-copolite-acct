@@ -15,6 +15,29 @@ type Turn = {
   cleanedTranscript: string | null;
 };
 
+/**
+ * A readable name for a voice.
+ *
+ * The raw ones are unhelpfully verbose ("Microsoft Aria Online (Natural) -
+ * English (United States)"), and in a dropdown every entry looks the same
+ * until the very end, which is the part that gets cut off.
+ */
+function voiceLabel(v: SpeechSynthesisVoice): string {
+  const name = v.name
+    .replace(/^Microsoft\s+/i, "")
+    .replace(/^Google\s+/i, "")
+    .replace(/\s*-\s*English.*$/i, "")
+    .replace(/\s*Online\s*\(Natural\)/i, "")
+    .trim();
+  const region = /en-us/i.test(v.lang)
+    ? "US"
+    : /en-gb/i.test(v.lang)
+    ? "UK"
+    : v.lang.split("-")[1] ?? "";
+  const natural = /(natural|online|neural)/i.test(v.name) ? " ✦" : "";
+  return `${name || v.name} (${region})${natural}`;
+}
+
 export default function MockSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -24,7 +47,15 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
   const [ending, setEnding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { speak, cancel, speaking, supported: voiceSupported } = useSpeechSynthesis();
+  const {
+    speak,
+    cancel,
+    speaking,
+    supported: voiceSupported,
+    englishVoices,
+    preferredUri,
+    chooseVoice,
+  } = useSpeechSynthesis();
   const [voiceOn, setVoiceOn] = useState(true);
   // Questions already read aloud, so re-fetching the transcript doesn't make
   // the interviewer repeat itself.
@@ -280,6 +311,31 @@ export default function MockSessionPage({ params }: { params: Promise<{ id: stri
               >
                 {voiceOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
               </Button>
+              {/* Which voices exist depends entirely on the machine, so the
+                  only reliable way to land on one the candidate can follow is
+                  to let them hear the options and choose. */}
+              {englishVoices.length > 1 && (
+                <select
+                  className="rounded-lg border border-surface-border bg-surface px-2 py-2 text-sm text-navy max-w-[210px]"
+                  value={preferredUri ?? ""}
+                  title="Interviewer voice"
+                  onChange={(e) => {
+                    const uri = e.target.value || null;
+                    chooseVoice(uri);
+                    cancel();
+                    void speak("Thanks for making the time today. Let's start with your background.", {
+                      voiceURI: uri,
+                    });
+                  }}
+                >
+                  <option value="">Best American voice</option>
+                  {englishVoices.map((v) => (
+                    <option key={v.voiceURI} value={v.voiceURI}>
+                      {voiceLabel(v)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </>
           )}
           <Button variant="danger" onClick={endInterview} disabled={ending}>
