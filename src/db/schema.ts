@@ -221,6 +221,8 @@ export const jobs = sqliteTable("jobs", {
   interviewDate: text("interview_date"),
   interviewTime: text("interview_time"),
   interviewerName: text("interviewer_name"),
+  companyResearch: text("company_research"),
+  prepNotes: text("prep_notes"),
   matchScore: integer("match_score"),
   matchBreakdownJson: text("match_breakdown_json", { mode: "json" }),
   createdAt: now(),
@@ -257,6 +259,7 @@ export const interviewQuestions = sqliteTable("interview_questions", {
 });
 
 export const preparedAnswers = sqliteTable("prepared_answers", {
+  source: text("source"), // "ai" | "user"
   id: id(),
   questionId: text("question_id").notNull(),
   userId: text("user_id").notNull(),

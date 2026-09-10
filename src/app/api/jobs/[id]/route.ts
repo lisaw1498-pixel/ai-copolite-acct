@@ -27,6 +27,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     "interviewTime",
     "interviewerName",
     "resumeId",
+    "companyResearch",
+    "prepNotes",
+    "company",
+    "jobTitle",
+    "location",
   ]) {
     if (key in body) allowed[key] = body[key];
   }

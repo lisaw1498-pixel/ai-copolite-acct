@@ -79,6 +79,11 @@ function connect(): DB {
   // Post-interview report generation is a background job too, and a background
   // job has no response to attach a failure to.
   ensureColumn(sqlite, "interview_sessions", "report_error", "text");
+  // Everything for one interview lives on the job record, so research notes
+  // belong here rather than in a parallel entity.
+  ensureColumn(sqlite, "jobs", "company_research", "text");
+  ensureColumn(sqlite, "jobs", "prep_notes", "text");
+  ensureColumn(sqlite, "prepared_answers", "source", "text");
 
   const instance = drizzle(sqlite, { schema });
   if (process.env.NODE_ENV !== "production") {

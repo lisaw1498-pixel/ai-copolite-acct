@@ -113,7 +113,7 @@ export default function JobAnalysisPage({ params }: { params: Promise<{ id: stri
       </Card>
 
       <div className="flex justify-end">
-        <Button href={`/prepare/${job.id}`}>Prepare for This Interview</Button>
+        <Button href={`/jobs/${job.id}/prep`}>Prepare for This Interview</Button>
       </div>
     </div>
   );

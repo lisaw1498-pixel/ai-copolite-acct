@@ -20,6 +20,41 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json({ questions: rows });
 }
 
+/**
+ * Adds a question the candidate wrote themselves.
+ *
+ * Stored alongside the predicted ones but flagged `generated: false`, so the
+ * library can show which questions came from the candidate's own research -
+ * a recruiter who told them what to expect is better evidence than a
+ * prediction.
+ */
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const question: string = (body.question ?? "").trim();
+  if (!question) return NextResponse.json({ error: "Question text is required" }, { status: 400 });
+
+  const job = db.select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.userId, user.id))).get();
+  if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const row = db
+    .insert(interviewQuestions)
+    .values({
+      jobId: id,
+      userId: user.id,
+      question,
+      category: body.category || "custom",
+      likelihood: body.likelihood || "high",
+      difficulty: body.difficulty || "medium",
+      generated: false,
+    })
+    .returning()
+    .get();
+  return NextResponse.json({ question: row });
+}
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

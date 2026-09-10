@@ -123,6 +123,7 @@ export default function JobsPage() {
               {j.interviewDate && <Pill>{j.interviewDate}</Pill>}
             </div>
             <div className="mt-3 flex gap-2">
+              <Button href={`/jobs/${j.id}/prep`}>Interview Hub</Button>
               <Button variant="secondary" href={`/jobs/${j.id}`}>Analyze</Button>
               <Button variant="secondary" href={`/prepare/${j.id}`}>Prepare</Button>
               <Button href="/live">Open Interview</Button>

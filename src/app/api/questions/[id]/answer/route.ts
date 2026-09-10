@@ -42,11 +42,63 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     answer: {
       answerId: row.id,
       approved: Boolean(row.approved),
+      // Lets the UI distinguish an answer the candidate wrote from one the
+      // system generated - the former is stronger evidence.
+      source: row.source ?? "ai",
       quick: shape(row.shortAnswer),
       standard: shape(row.standardAnswer),
       detailed: shape(row.longAnswer),
     },
   });
+}
+
+/**
+ * Saves an answer the candidate wrote themselves.
+ *
+ * A candidate's own words are the strongest possible grounding - stronger than
+ * anything generated - so this is stored as the prepared answer and marked
+ * approved and user-authored straight away.
+ */
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const text: string = (body.answer ?? "").trim();
+  if (!text) return NextResponse.json({ error: "Answer text is required" }, { status: 400 });
+
+  const question = db
+    .select()
+    .from(interviewQuestions)
+    .where(and(eq(interviewQuestions.id, id), eq(interviewQuestions.userId, user.id)))
+    .get();
+  if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
+
+  const existing = db
+    .select()
+    .from(preparedAnswers)
+    .where(and(eq(preparedAnswers.questionId, id), eq(preparedAnswers.userId, user.id)))
+    .get();
+
+  const values = {
+    standardAnswer: text,
+    shortAnswer: text,
+    longAnswer: text,
+    source: "user",
+    approved: true,
+    updatedAt: new Date(),
+  };
+
+  if (existing) {
+    db.update(preparedAnswers).set(values).where(eq(preparedAnswers.id, existing.id)).run();
+    return NextResponse.json({ ok: true, answerId: existing.id });
+  }
+  const row = db
+    .insert(preparedAnswers)
+    .values({ questionId: id, userId: user.id, ...values })
+    .returning()
+    .get();
+  return NextResponse.json({ ok: true, answerId: row.id });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
