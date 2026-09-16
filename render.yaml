@@ -1,0 +1,34 @@
+# One-click deployment blueprint for Render.
+#
+# Point Render at this repository and it reads this file: no manual service
+# configuration, and the disk below is what keeps the database between
+# deploys.
+#
+# A disk requires a paid instance type. On a free instance the filesystem is
+# wiped on every restart, which for this app means losing the resume, the
+# jobs, the prepared answers and the interview history - so free is not an
+# option here, it is data loss on a timer.
+
+services:
+  - type: web
+    name: ai-interview-copilot
+    runtime: docker
+    plan: starter
+    region: oregon
+    healthCheckPath: /login
+    disk:
+      name: copilot-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      # Set in the Render dashboard, not here - this file is in git.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Signs the login session. Render generates one; changing it later logs
+      # everyone out, which is harmless but surprising.
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /data/app.db
+      - key: NODE_ENV
+        value: production

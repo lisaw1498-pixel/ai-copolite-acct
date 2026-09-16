@@ -1,0 +1,11 @@
+# Keep the build context small and, more importantly, keep local data out of
+# the image. The database on the host volume is the real one; a copy baked
+# into the image would be stale the moment it deployed.
+node_modules
+.next
+.git
+.env*
+data
+docs/img
+*.log
+.DS_Store
