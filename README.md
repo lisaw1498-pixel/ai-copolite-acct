@@ -4,6 +4,16 @@ Your experience. Your answers. Real-time interview support — grounded in what 
 
 This is a working implementation of the AI Interview Copilot blueprint: account creation, resume parsing, a candidate knowledge base, a **Verified Experience Layer** that gates every AI-generated claim, job matching, mock interviews, and a real-time two-panel Live Interview Copilot (SAY THIS / REMEMBER THIS) driven by your browser's microphone.
 
+## Hosting it on a real web address
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/lisaw1498-pixel/ai-copolite-acct)
+
+That button reads `render.yaml` and sets up the service, the Docker build, and
+the persistent disk the database lives on. It needs a paid instance, because
+free tiers have no permanent disk and would erase your resume and prep work on
+every restart. See [DEPLOY.md](DEPLOY.md) for the cost, the steps, and what
+happens to your existing local data.
+
 ## Quick start
 
 ```bash
