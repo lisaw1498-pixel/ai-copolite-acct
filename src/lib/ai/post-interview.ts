@@ -29,7 +29,6 @@ export async function generatePostInterviewReport(
   return callClaudeJSON<PostInterviewReport>({
     system: REPORT_SYSTEM,
     prompt: `TRANSCRIPT:\n${text.slice(0, 16000)}`,
-    maxTokens: 16000,
     effort: "high",
   });
 }

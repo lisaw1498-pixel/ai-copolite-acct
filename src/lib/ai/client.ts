@@ -86,10 +86,25 @@ type CallOpts = {
   effort?: Effort;
 };
 
+/**
+ * Ceiling for a single response.
+ *
+ * Every call here streams, so the usual reason to keep this low - an HTTP
+ * timeout on a long non-streaming generation - does not apply, and the
+ * guidance for streaming requests is to leave real headroom. 16000 was the
+ * non-streaming default and it was not enough: a long resume produced more
+ * structured output than that, the response was cut off mid-JSON, and the
+ * upload failed with nothing salvageable.
+ *
+ * This is a cap, not a reservation. Raising it costs nothing on responses that
+ * were already finishing; it only stops the long ones being truncated.
+ */
+const MAX_OUTPUT_TOKENS = 64000;
+
 function buildParams(opts: CallOpts) {
   return {
     model: MODEL,
-    max_tokens: opts.maxTokens ?? 16000,
+    max_tokens: opts.maxTokens ?? MAX_OUTPUT_TOKENS,
     system: opts.system,
     messages: [{ role: "user" as const, content: opts.prompt }],
     // `output_config` is newer than some installed SDK typings, so it is
@@ -109,7 +124,7 @@ function buildParams(opts: CallOpts) {
 function finishMessage(res: Anthropic.Message, opts: CallOpts): string {
   if (res.stop_reason === "max_tokens") {
     throw new Error(
-      `Response hit the ${opts.maxTokens ?? 16000}-token cap and was cut off before it finished.`
+      `Response hit the ${opts.maxTokens ?? MAX_OUTPUT_TOKENS}-token cap and was cut off before it finished.`
     );
   }
   if (res.stop_reason === "refusal") {

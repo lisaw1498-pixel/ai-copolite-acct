@@ -31,7 +31,6 @@ export async function generateInterviewQuestions(opts: {
       .slice(0, 30)
       .map((r) => `- (${r.priority}) ${r.requirement}`)
       .join("\n")}\n\nCANDIDATE FACTS:\n${factsBlock || "(none)"}`,
-    maxTokens: 16000,
     effort: "high",
   });
   return result.questions;

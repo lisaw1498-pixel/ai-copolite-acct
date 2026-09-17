@@ -55,11 +55,19 @@ Return only a single JSON object matching this shape, nothing else:
   "suggested_career_stories": [ { "title": string, "category": string, "situation": string, "task": string, "action": string, "result": string, "metrics": string } ]
 }`;
 
+/**
+ * The largest output of any call in the app, and the one that overflowed.
+ *
+ * A dense resume becomes every employer, every skill, every technology and a
+ * set of STAR stories, all as structured JSON. A 16000-token ceiling truncated
+ * that mid-object on a long CV, and because the result is parsed as JSON there
+ * was nothing partial to keep - the upload simply failed. Left to the default
+ * ceiling, which has the headroom this needs.
+ */
 export async function extractResumeFacts(rawText: string): Promise<ExtractedResume> {
   return callClaudeJSON<ExtractedResume>({
     system: RESUME_EXTRACTION_SYSTEM,
     prompt: `RESUME TEXT:\n"""\n${rawText.slice(0, 18000)}\n"""`,
-    maxTokens: 16000,
     effort: "medium",
   });
 }
@@ -143,7 +151,6 @@ export async function matchJobToFacts(
     prompt: `JOB REQUIREMENTS:\n${requirements
       .map((r) => `- (${r.priority}, ${r.category}) ${r.requirement}`)
       .join("\n")}\n\nCANDIDATE FACTS:\n${factsBlock || "(none)"}`,
-    maxTokens: 16000,
     effort: "medium",
   });
 }

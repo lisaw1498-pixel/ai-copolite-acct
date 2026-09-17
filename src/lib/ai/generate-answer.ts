@@ -258,7 +258,6 @@ export async function generateAnswer(input: GenerateAnswerInput): Promise<Genera
   const draft = await callClaudeJSON<GeneratedAnswer>({
     system: CORE_SYSTEM_PROMPT,
     prompt: buildPrompt(input),
-    maxTokens: 16000,
     effort: "low",
   });
   const { answer } = await validateClaims(draft, input.facts, input.stories);
@@ -293,7 +292,6 @@ export async function generateAnswerStreaming(
     {
       system: CORE_SYSTEM_PROMPT,
       prompt: buildPrompt(input),
-      maxTokens: 16000,
       effort: "low",
     },
     (chunk) => {
