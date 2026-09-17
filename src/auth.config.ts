@@ -1,5 +1,25 @@
 import type { NextAuthConfig } from "next-auth";
 
+/**
+ * Tell Auth.js the address the outside world reaches us at.
+ *
+ * `trustHost` alone was not enough on Render. Auth.js kept deriving its
+ * callback URLs from the address the container sees itself at -
+ * `https://localhost:10000` - so signing in redirected the browser to a port
+ * on the user's own machine. The login page rendered fine, which made it look
+ * like a password problem rather than a configuration one.
+ *
+ * AUTH_URL is the explicit override and takes precedence over any header
+ * sniffing. Render publishes the public URL as RENDER_EXTERNAL_URL, so this
+ * needs no hand-configuration and survives the service being renamed. Set
+ * AUTH_URL yourself to override, on Render or anywhere else.
+ *
+ * Assigned before NextAuth is constructed, because it reads this at import.
+ */
+if (!process.env.AUTH_URL && process.env.RENDER_EXTERNAL_URL) {
+  process.env.AUTH_URL = process.env.RENDER_EXTERNAL_URL;
+}
+
 // Edge-safe subset of the NextAuth config (no providers that touch the
 // database) so this can be used from Proxy/Middleware, which runs on the
 // Edge runtime and can't load the native better-sqlite3 binding. The full
