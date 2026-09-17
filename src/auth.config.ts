@@ -6,6 +6,22 @@ import type { NextAuthConfig } from "next-auth";
 // config with the Credentials provider lives in src/auth.ts and runs in
 // Node.js (API routes, server components).
 export const authConfig = {
+  /**
+   * Trust the Host header from the proxy in front of us.
+   *
+   * Auth.js derives the callback URL from the request host, and refuses to do
+   * so unless told the host is trustworthy - otherwise a forged Host header
+   * could redirect a sign-in somewhere else. It special-cases Vercel and
+   * trusts it automatically; every other host, including Render, it does not,
+   * so sign-in fails with UntrustedHost even though the login page renders
+   * perfectly. That combination is unpleasant to diagnose from the outside.
+   *
+   * Safe here because the app is always reached through the platform's own
+   * proxy, which terminates TLS and sets Host itself. If this is ever served
+   * directly to the internet without one, set AUTH_URL instead and remove
+   * this.
+   */
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [],
