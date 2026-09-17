@@ -13,6 +13,12 @@ services:
   - type: web
     name: ai-interview-copilot
     runtime: docker
+    # Render renamed compute plans in 2026; this appears as `0.5c-512mb`
+    # (0.5 CPU, 512 MB) in the dashboard. The legacy name still resolves.
+    #
+    # This is the per-service compute cost and is separate from the workspace
+    # plan. The workspace should stay on Hobby, which is free - Pro at
+    # $25/month buys team seats that a single-user app has no use for.
     plan: starter
     region: oregon
     healthCheckPath: /login

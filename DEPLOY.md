@@ -7,17 +7,41 @@ interview.
 
 ## What it costs, and where you pay
 
-**$7.25 a month**, as two separate charges on the same Render bill:
+Render bills two unrelated things, and confusing them is how you end up paying
+$25/month for something you do not need.
+
+**1. The workspace plan** - Hobby, Pro, Scale, Enterprise. This is about team
+size and account features, not about running anything.
+
+> **Stay on Hobby. It is $0/month and it is the right plan for you.**
+>
+> Hobby covers one person and up to 25 services, which is exactly this. Pro at
+> $25/month buys unlimited team members and more bandwidth - nothing you need
+> for a single-user app. If the plan picker shows Pro selected, switch back to
+> Hobby before continuing.
+
+**2. The compute for the service** - charged per service, on top of the
+workspace plan. This is the part that actually costs money, and it is why the
+Hobby card says "$0/mo **plus compute costs**".
 
 | Item | Cost |
 | --- | --- |
-| Starter web service (512 MB RAM, 0.5 CPU) | $7.00 / month |
+| Workspace plan: Hobby | $0.00 / month |
+| Compute: `0.5c-512mb` (0.5 CPU, 512 MB; formerly "Starter") | ~$7.00 / month |
 | Persistent disk, 1 GB at $0.25/GB | $0.25 / month |
+| **Total** | **~$7.25 / month** |
+
+Render renamed compute plans in 2026 from "Starter/Standard/Pro" to
+`[CPU]c-[RAM]g`, so "Starter" now appears as `0.5c-512mb`. The old names still
+work, which is why `render.yaml` can say `plan: starter`.
 
 **You pay at <https://render.com>.** Signing up is free and takes an email
-address. Render only asks for a card at the point you choose a paid instance
-type while creating the service - that is the moment the $7 starts, not
-before. Billing is monthly and you can delete the service to stop it.
+address. Render asks for a card when you choose paid compute for the service -
+not when you pick the Hobby workspace. Billing is monthly and deleting the
+service stops it.
+
+A free service cannot have a persistent disk - Render's docs are explicit
+about that - which is the whole reason compute has to be paid here.
 
 Neither charge is avoidable, and it is worth knowing why before you spend it.
 
@@ -59,14 +83,17 @@ Start here - this link opens Render with the repository already filled in:
 
 **<https://render.com/deploy?repo=https://github.com/lisaw1498-pixel/ai-copolite-acct>**
 
-1. **Sign in or create a Render account.** Free, email address only.
+1. **Sign in or create a Render account.** Free, email address only. If you
+   are asked to choose a workspace plan, choose **Hobby ($0)** - see the cost
+   section above.
 
 2. **Render reads `render.yaml` and shows you the plan** - one web service,
    a Docker build, a 1 GB disk mounted at `/data`. You do not have to
    configure any of it by hand.
 
-3. **Confirm the Starter instance.** This is where Render asks for a card and
-   where the $7.25/month begins.
+3. **Confirm the compute plan,** `0.5c-512mb` (listed as "Starter" in older
+   screens). This is where Render asks for a card and where the ~$7.25/month
+   begins.
 
 4. **Paste your Anthropic API key** into `ANTHROPIC_API_KEY` when prompted.
    Use the same key as in your local `.env.local`. It is deliberately not
